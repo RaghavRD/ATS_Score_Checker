@@ -55,6 +55,81 @@ class LLMService:
             logger.error(f"LLM API Error: {e}")
             return self._get_error_response()
 
+    def generate_tailored_resume(self, resume_text: str, jd_text: str) -> str:
+        """
+        Generates an HTML snippet with tailored summary and bullets.
+        """
+        if not self.client:
+            return "<p><em>Mock Tailored Resume: AI rewriting not available without API Key.</em></p>"
+
+        prompt = f"""
+        You are an expert Resume Writer. 
+        Rewrite the "Professional Summary" and "Key Experience Points" from the Resume below to better align with the Job Description.
+        Use Keywords from the JD naturally.
+        
+        JOB DESCRIPTION:
+        {jd_text[:2000]}
+        
+        RESUME:
+        {resume_text[:2000]}
+        
+        Output a clean HTML snippet (no markdown, just <div>, <h3>, <p>, <ul>, <li>) containing:
+        1. <h3>Tailored Summary</h3> -> The new summary.
+        2. <h3>Optimized Highlights</h3> -> 3-5 bullet points optimized for this JD.
+        """
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a professional resume writer. Output HTML only."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Tailor API Error: {e}")
+            return "<p class='text-danger'>Error generating tailored content.</p>"
+
+    def generate_interview_questions(self, full_text: str, jd_text: str) -> str:
+        """
+        Generates interview questions based on resume gaps vs JD.
+        """
+        if not self.client:
+            return "<p><em>Mock Interview: AI generation not available without API Key.</em></p>"
+
+        prompt = f"""
+        You are a Technical Interviewer.
+        Based on the Job Description and the Candidate's Resume, generate a list of interview questions.
+        Focus on specific frameworks or skills mentioned in the JD.
+        
+        JOB DESCRIPTION:
+        {jd_text[:2000]}
+        
+        RESUME:
+        {full_text[:2000]}
+        
+        Output a clean HTML snippet (no markdown) containing:
+        1. <h3>Technical Questions</h3> (5 questions)
+        2. <h3>Behavioral Questions</h3> (3 questions)
+        3. <h3>Gap Analysis</h3> (1 question about a missing skill if any)
+        """
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a lead interviewer. Output HTML only."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Interview API Error: {e}")
+            return "<p class='text-danger'>Error generating interview questions.</p>"
+
     def _build_prompt(self, resume: str, jd: str) -> str:
         # Truncate to reasonable limits to avoid token overflow issues on small limits
         return f"""

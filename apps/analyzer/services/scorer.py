@@ -16,31 +16,61 @@ def get_embedding_model():
 
 class BaseScorer(ABC):
     @abstractmethod
-    def score(self, resume_text: str, jd_text: str) -> Dict[str, Any]:
+    def score(self, resume_data: Dict[str, Any], jd_text: str) -> Dict[str, Any]:
         pass
 
 class KeywordScorer(BaseScorer):
     def __init__(self):
         self.processor = TextProcessor()
 
-    def score(self, resume_text: str, jd_text: str) -> Dict[str, Any]:
-        resume_keywords = self.processor.extract_keywords(resume_text)
+    def score(self, resume_data: Dict[str, Any], jd_text: str) -> Dict[str, Any]:
+        full_text = resume_data.get('full_text', '')
+        sections = resume_data.get('sections', {})
+        
         jd_keywords = self.processor.extract_keywords(jd_text)
         
         if not jd_keywords:
             return {"score": 0, "matches": [], "missing": []}
 
-        # Calculate overlap
-        matches = resume_keywords.intersection(jd_keywords)
-        missing = jd_keywords - matches
+        # Extract keywords from different sources
+        full_text_keywords = self.processor.extract_keywords(full_text)
         
-        # Jaccard index or simple coverage? 
-        # Simple coverage (Recall) is usually better for ATS: "Do you have the required skills?"
-        coverage = len(matches) / len(jd_keywords)
-        score = round(coverage * 100, 1)
+        # Section-specific sets for weighting
+        skills_keywords = self.processor.extract_keywords(sections.get('skills', ''))
+        exp_keywords = self.processor.extract_keywords(sections.get('experience', ''))
+        
+        matches = set()
+        base_score = 0.0
+        bonus_score = 0.0
+        
+        for word in jd_keywords:
+            if word in full_text_keywords:
+                matches.add(word)
+                base_score += 1.0
+                
+                # Weighting: Bonus if found in relevant sections
+                if word in skills_keywords:
+                    bonus_score += 0.5
+                elif word in exp_keywords:
+                    bonus_score += 0.3
+        
+        # Score Calculation
+        # Base Coverage: up to 80 points
+        coverage_ratio = base_score / len(jd_keywords)
+        coverage_points = coverage_ratio * 80
+        
+        # Bonus Points: up to 20 points
+        # Max reasonable bonus is roughly 0.5 * len(keywords) (if all in skills)
+        max_bonus = len(jd_keywords) * 0.5
+        bonus_ratio = 0 if max_bonus == 0 else (bonus_score / max_bonus)
+        bonus_points = bonus_ratio * 20
+        
+        final_score = min(100, round(coverage_points + bonus_points, 1))
+        
+        missing = jd_keywords - matches
 
         return {
-            "score": score,
+            "score": final_score,
             "match_count": len(matches),
             "total_keywords": len(jd_keywords),
             "matches": list(matches),
@@ -48,11 +78,13 @@ class KeywordScorer(BaseScorer):
         }
 
 class SemanticScorer(BaseScorer):
-    def score(self, resume_text: str, jd_text: str) -> Dict[str, Any]:
+    def score(self, resume_data: Dict[str, Any], jd_text: str) -> Dict[str, Any]:
+        # Semantic score uses full text for broad context
+        resume_text = resume_data.get('full_text', '')
+        
         model = get_embedding_model()
         
         # Compute embeddings
-        # Clean text slightly differently? Standard processor is fine.
         processor = TextProcessor()
         clean_resume = processor.clean_text(resume_text)
         clean_jd = processor.clean_text(jd_text)
@@ -63,7 +95,6 @@ class SemanticScorer(BaseScorer):
         cosine_score = util.cos_sim(emb1, emb2).item()
         
         # Normalize -1 to 1 into 0 to 100
-        # Sim usually 0.0 to 1.0 for these sentences anyway
         final_score = max(0.0, min(1.0, cosine_score)) * 100
         
         return {
@@ -71,12 +102,18 @@ class SemanticScorer(BaseScorer):
         }
 
 class FormattingScorer(BaseScorer):
-    def score(self, resume_text: str, jd_text: str) -> Dict[str, Any]:
+    def score(self, resume_data: Dict[str, Any], jd_text: str) -> Dict[str, Any]:
+        """
+        Now uses structured section data to verify presence.
+        """
+        full_text = resume_data.get('full_text', '')
+        sections = resume_data.get('sections', {})
+        
         issues = []
         score = 100
         
-        # Length check (heuristic: too short implies incomplete, too long implies verbose)
-        word_count = len(resume_text.split())
+        # Length check
+        word_count = len(full_text.split())
         if word_count < 200:
             score -= 20
             issues.append("Resume might be too short (<200 words).")
@@ -84,17 +121,19 @@ class FormattingScorer(BaseScorer):
             score -= 10
             issues.append("Resume might be too long (>1500 words).")
 
-        # Section check
-        sections = ['experience', 'education', 'skills', 'projects']
-        lower_text = resume_text.lower()
+        # Section check (Smart Mode)
+        required_sections = ['experience', 'education', 'skills']
         missing_sections = []
-        for sec in sections:
-            if sec not in lower_text:
-                score -= 10
+        
+        for sec in required_sections:
+            content = sections.get(sec, '').strip()
+            # If empty or extremely short (parsing error or empty section)
+            if not content or len(content) < 10:
+                score -= 15
                 missing_sections.append(sec.title())
         
         if missing_sections:
-            issues.append(f"Missing standard sections: {', '.join(missing_sections)}")
+            issues.append(f"Missing or empty standard sections: {', '.join(missing_sections)}")
 
         return {
             "score": max(0, score),
@@ -110,13 +149,15 @@ class ScoringEngine:
         self.formatting_scorer = FormattingScorer()
         self.llm_service = LLMService()
 
-    def analyze(self, resume_text: str, jd_text: str) -> Dict[str, Any]:
-        k_res = self.keyword_scorer.score(resume_text, jd_text)
-        s_res = self.semantic_scorer.score(resume_text, jd_text)
-        f_res = self.formatting_scorer.score(resume_text, jd_text)
+    def analyze(self, resume_data: Dict[str, Any], jd_text: str) -> Dict[str, Any]:
+        # resume_data contains 'full_text' and 'sections'
         
-        # LLM Analysis
-        ai_res = self.llm_service.get_analysis(resume_text, jd_text)
+        k_res = self.keyword_scorer.score(resume_data, jd_text)
+        s_res = self.semantic_scorer.score(resume_data, jd_text)
+        f_res = self.formatting_scorer.score(resume_data, jd_text)
+        
+        # LLM Analysis (uses full text)
+        ai_res = self.llm_service.get_analysis(resume_data['full_text'], jd_text)
 
         # Weighted Hybrid Score
         hybrid_score = (

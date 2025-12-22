@@ -111,47 +111,207 @@
 <div class="row mb-5">
     <div class="col-12">
         <div class="card shadow-sm">
-            <div class="card-header bg-primary-subtle text-primary d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">🤖 AI Feedback & Suggestions</h4>
-                <span class="badge bg-white text-primary">{{ results.ai_analysis.experience_rating }} Fit</span>
-            </div>
-            <div class="card-body">
-                <div class="mb-4">
-                    <h5>Summary</h5>
-                    <p class="">{{ results.ai_analysis.summary }}</p>
+            <div class="card-header bg-primary-subtle d-flex justify-content-between align-items-center p-0">
+                <ul class="nav nav-tabs card-header-tabs m-0 w-100 p-2 border-bottom-0" id="aiTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold text-primary" id="critique-tab" data-bs-toggle="tab"
+                            data-bs-target="#critique-pane" type="button" role="tab">
+                            <i class="bi bi-clipboard-data me-2"></i>Critique
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-success" id="tailor-tab" data-bs-toggle="tab"
+                            data-bs-target="#tailor-pane" type="button" role="tab">
+                            <i class="bi bi-magic me-2"></i>Tailor Resume
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-purple" id="interview-tab" data-bs-toggle="tab"
+                            data-bs-target="#interview-pane" type="button" role="tab" style="color: #6f42c1;">
+                            <i class="bi bi-chat-dots me-2"></i>Interview Prep
+                        </button>
+                    </li>
+                </ul>
+                <div class="pe-3">
+                    <span class="badge bg-white text-primary">{{ results.ai_analysis.experience_rating }} Fit</span>
                 </div>
+            </div>
 
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6 class="text-success fw-bold">Key Strengths</h6>
-                        <ul class="list-group list-group-flush mb-3">
-                            {% for strength in results.ai_analysis.strengths %}
-                            <li class="list-group-item border-0 ps-0"><i
-                                    class="bi bi-check-circle-fill text-success me-2"></i>{{ strength }}</li>
-                            {% endfor %}
-                        </ul>
+            <div class="card-body">
+                <div class="tab-content" id="aiTabsContent">
+                    <!-- Tab 1: Critique (Existing) -->
+                    <div class="tab-pane fade show active" id="critique-pane" role="tabpanel">
+                        <div class="mb-4">
+                            <h5>Summary</h5>
+                            <p class="">{{ results.ai_analysis.summary }}</p>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6 class="text-success fw-bold">Key Strengths</h6>
+                                <ul class="list-group list-group-flush mb-3">
+                                    {% for strength in results.ai_analysis.strengths %}
+                                    <li class="list-group-item border-0 ps-0"><i
+                                            class="bi bi-check-circle-fill text-success me-2"></i>{{ strength }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-danger fw-bold">Missing Skills</h6>
+                                <ul class="list-group list-group-flush mb-3">
+                                    {% for skill in results.ai_analysis.missing_skills %}
+                                    <li class="list-group-item border-0 ps-0"><i
+                                            class="bi bi-exclamation-circle-fill text-danger me-2"></i>{{ skill }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-info fw-bold">Actionable Suggestions</h6>
+                                <ul class="list-group list-group-flush mb-3">
+                                    {% for tip in results.ai_analysis.suggestions %}
+                                    <li class="list-group-item border-0 ps-0"><i
+                                            class="bi bi-caret-right-fill text-info me-2"></i>{{ tip }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <h6 class="text-danger fw-bold">Missing Skills</h6>
-                        <ul class="list-group list-group-flush mb-3">
-                            {% for skill in results.ai_analysis.missing_skills %}
-                            <li class="list-group-item border-0 ps-0"><i
-                                    class="bi bi-exclamation-circle-fill text-danger me-2"></i>{{ skill }}</li>
-                            {% endfor %}
-                        </ul>
+
+                    <!-- Tab 2: Tailor Resume (New) -->
+                    <div class="tab-pane fade" id="tailor-pane" role="tabpanel">
+                        {% if analysis_obj %}
+                        <div class="text-center py-4" id="tailor-initial">
+                            <i class="bi bi-stars display-4 text-warning mb-3"></i>
+                            <h4>Generate Tailored Content</h4>
+                            <p class="text-muted">Use AI to rewrite your summary and highlights specifically for this
+                                Job Description.</p>
+                            <button id="btn-tailor" class="btn btn-warning text-white fw-bold px-4"
+                                onclick="generateTailor('{{ analysis_obj.id }}')">
+                                <i class="bi bi-magic me-2"></i>Rewrite Resume Sections
+                            </button>
+                        </div>
+                        <div id="tailor-loading" class="text-center py-5 d-none">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Analyzing JS & Resume keywords...</p>
+                        </div>
+                        <div id="tailor-result" class="d-none">
+                            <!-- AI Content will be injected here -->
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            Please <a href="/login">log in</a> to use the AI Resume Tailor feature.
+                        </div>
+                        {% endif %}
                     </div>
-                    <div class="col-md-4">
-                        <h6 class="text-info fw-bold">Actionable Suggestions</h6>
-                        <ul class="list-group list-group-flush mb-3">
-                            {% for tip in results.ai_analysis.suggestions %}
-                            <li class="list-group-item border-0 ps-0"><i
-                                    class="bi bi-caret-right-fill text-info me-2"></i>{{ tip }}</li>
-                            {% endfor %}
-                        </ul>
+
+                    <!-- Tab 3: Interview Prep (New) -->
+                    <div class="tab-pane fade" id="interview-pane" role="tabpanel">
+                        {% if analysis_obj %}
+                        <div class="text-center py-4" id="interview-initial">
+                            <i class="bi bi-person-video2 display-4 text-purple mb-3" style="color: #6f42c1;"></i>
+                            <h4>Mock Interview Questions</h4>
+                            <p class="text-muted">Generate specific technical and behavioral questions based on your
+                                resume gaps.</p>
+                            <button id="btn-interview" class="btn fw-bold px-4 text-white"
+                                style="background-color: #6f42c1;" onclick="generateInterview('{{ analysis_obj.id }}')">
+                                <i class="bi bi-play-circle me-2"></i>Generate Questions
+                            </button>
+                        </div>
+                        <div id="interview-loading" class="text-center py-5 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Preparing your interview...</p>
+                        </div>
+                        <div id="interview-result" class="d-none">
+                            <!-- AI Content will be injected here -->
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            Please <a href="/login">log in</a> to use the Interview Prep feature.
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function generateTailor(id) {
+        document.getElementById('tailor-initial').classList.add('d-none');
+        document.getElementById('tailor-loading').classList.remove('d-none');
+
+        const csrftoken = getCookie('csrftoken');
+
+        fetch('{% url "analyzer:tailor_resume" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken
+            },
+            body: `analysis_id=${id}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('tailor-loading').classList.add('d-none');
+                const resultDiv = document.getElementById('tailor-result');
+                resultDiv.innerHTML = data.content;
+                resultDiv.classList.remove('d-none');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('tailor-loading').classList.add('d-none');
+                document.getElementById('tailor-initial').classList.remove('d-none');
+                alert('Failed to generate content. Please try again.');
+            });
+    }
+
+    function generateInterview(id) {
+        document.getElementById('interview-initial').classList.add('d-none');
+        document.getElementById('interview-loading').classList.remove('d-none');
+
+        const csrftoken = getCookie('csrftoken');
+
+        fetch('{% url "analyzer:interview_prep" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken
+            },
+            body: `analysis_id=${id}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('interview-loading').classList.add('d-none');
+                const resultDiv = document.getElementById('interview-result');
+                resultDiv.innerHTML = data.content;
+                resultDiv.classList.remove('d-none');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('interview-loading').classList.add('d-none');
+                document.getElementById('interview-initial').classList.remove('d-none');
+                alert('Failed to generate interview questions. Please try again.');
+            });
+    }
+</script>
 {% endblock %}

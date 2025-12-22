@@ -51,3 +51,70 @@ class TextProcessor:
             if word not in self.stop_words and len(word) > 1
         }
         return keywords
+
+class SectionExtractor:
+    """
+    Heuristic-based extractor to split resume text into logical sections.
+    """
+    
+    SECTION_HEADERS = {
+        'experience': [
+            r'experience', r'work history', r'work experience', r'employment', 
+            r'professional experience', r'career history'
+        ],
+        'education': [
+            r'education', r'academic background', r'qualifications', r'academic history'
+        ],
+        'skills': [
+            r'skills', r'technical skills', r'technologies', r'core competencies', 
+            r'proficiencies', r'stack'
+        ],
+        'projects': [
+            r'projects', r'personal projects', r'side projects', r'key projects'
+        ],
+        'summary': [
+            r'summary', r'professional summary', r'profile', r'objective', r'about me'
+        ]
+    }
+
+    def extract_sections(self, text: str) -> dict[str, str]:
+        """
+        Splits text into sections based on known headers.
+        Returns a dictionary with keys: experience, education, skills, projects, summary, uncategorized.
+        """
+        lines = text.split('\n')
+        sections = {
+            'experience': [],
+            'education': [],
+            'skills': [],
+            'projects': [],
+            'summary': [],
+            'uncategorized': []
+        }
+        
+        current_section = 'uncategorized'
+        
+        for line in lines:
+            clean_line = line.strip().lower()
+            if not clean_line:
+                continue
+                
+            # Check if line is a header
+            is_header = False
+            for section_name, patterns in self.SECTION_HEADERS.items():
+                # A header is usually short (less than 6 words)
+                if len(clean_line.split()) < 6:
+                    for pattern in patterns:
+                        # Exact match or match with colon (e.g. "Experience:")
+                        if re.match(f"^{pattern}:?$", clean_line):
+                            current_section = section_name
+                            is_header = True
+                            break
+                if is_header:
+                    break
+            
+            if not is_header:
+                sections[current_section].append(line.strip())
+        
+        # Join lists back into strings
+        return {k: "\n".join(v) for k, v in sections.items()}

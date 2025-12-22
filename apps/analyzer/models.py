@@ -14,6 +14,9 @@ class AnalysisResult(models.Model):
     semantic_score = models.FloatField()
     formatting_score = models.FloatField()
     
+    # Store full text for reprocessing/comparison
+    full_text = models.TextField(default="", blank=True)
+    
     # JSON Data (Full Breakdown & AI Feedback)
     # Using JSONField if supported (SQLite supports it in recent Django versions)
     # Otherwise TextField with json dumps

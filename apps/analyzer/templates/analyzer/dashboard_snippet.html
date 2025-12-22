@@ -1,0 +1,76 @@
+{% load static %}
+
+{% if stats %}
+<div class="row mb-5">
+    <!-- Stat Cards -->
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center border-0 bg-light h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase small ls-1">Total Scans</h6>
+                <div class="display-5 fw-bold text-primary">{{ stats.total_scans }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center border-0 bg-light h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase small ls-1">Avg Score</h6>
+                <div class="display-5 fw-bold text-success">{{ stats.average_score }}%</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart -->
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body position-relative">
+                 <h6 class="text-muted text-uppercase small ls-1 mb-3">Progress Over Time</h6>
+                 <canvas id="progressChart" style="max-height: 120px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const historyData = {{ stats.history|safe }};
+        
+        const labels = historyData.map(item => item.date);
+        const dataPoints = historyData.map(item => item.score);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'ATS Score',
+                    data: dataPoints,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false }, // Cleaner look for mini-dashboard
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100,
+                        grid: { display: false } 
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
