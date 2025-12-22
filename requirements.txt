@@ -1,0 +1,10 @@
+Django>=5.0
+python-dotenv
+pdfplumber
+python-docx
+sentence-transformers
+scikit-learn
+numpy
+nltk
+whitenoise
+openai

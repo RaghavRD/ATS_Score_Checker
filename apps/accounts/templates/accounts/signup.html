@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up - Rank My CV{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">Create Account</h3>
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {# Simple rendering for signup since UserCreationForm is complex; likely needs manual widget
+                        tweaking or crispy forms later #}
+                        {% if field.help_text %}
+                        <div class="form-text small text-muted">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-success">Sign Up</button>
+                    </div>
+                </form>
+                <div class="text-center mt-3">
+                    <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Quick script to add Bootstrap classes to standard Django form fields
+    document.querySelectorAll('input, select, textarea').forEach(e => e.classList.add('form-control'));
+</script>
+{% endblock %}

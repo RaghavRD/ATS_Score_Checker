@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Analysis Results - Rank My CV{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Analysis Results</h1>
+    <a href="{% url 'analyzer:home' %}" class="btn btn-outline-secondary">Upload New Resume</a>
+</div>
+
+<!-- Overall Score -->
+<div class="row mb-5">
+    <div class="col-md-4 text-center">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                <h5 class="card-title text-muted">ATS Compatibility Score</h5>
+                <div class="display-1 fw-bold 
+                {% if results.final_score >= 80 %}text-success
+                {% elif results.final_score >= 50 %}text-warning
+                {% else %}text-danger{% endif %}">
+                    {{ results.final_score }}<i>%</i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h3 class="h4 mb-2">Score Breakdown</h3>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Keyword Match (40%)</span>
+                        <span>{{ results.breakdown.keyword_score }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" role="progressbar"
+                            style="width: {{ results.breakdown.keyword_score }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Semantic Similarity (40%)</span>
+                        <span>{{ results.breakdown.semantic_score }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                            role="progressbar" style="width: {{ results.breakdown.semantic_score }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Formatting & Structure (20%)</span>
+                        <span>{{ results.breakdown.formatting_score }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-secondary"
+                            role="progressbar" style="width: {{ results.breakdown.formatting_score }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keywords Section -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success-subtle text-success">Matched Keywords ({{
+                results.details.keywords.match_count }})</div>
+            <div class="card-body">
+                {% for word in results.details.keywords.matches %}
+                <span class="badge text-bg-light border border-success text-success me-1 mb-1">{{ word }}</span>
+                {% empty %}
+                <p class="text-muted">No exact keyword matches found.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-danger-subtle text-danger">Missing Keywords</div>
+            <div class="card-body">
+                {% for word in results.details.keywords.missing %}
+                <span class="badge text-bg-light border border-danger text-danger me-1 mb-1">{{ word }}</span>
+                {% empty %}
+                <p class="text-success">Great job! No obvious missing keywords.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formatting Issues -->
+{% if results.details.formatting.issues %}
+<div class="card shadow-sm border-warning mb-4">
+    <div class="card-header bg-warning">
+        <h5 class="mb-0">Formatting Improvements</h5>
+    </div>
+    <div class="card-body">
+        <ul class="list-group list-group-flush">
+            {% for issue in results.details.formatting.issues %}
+            <li class="list-group-item">{{ issue }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<!-- AI Analysis Section -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary-subtle text-primary d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">🤖 AI Feedback & Suggestions</h4>
+                <span class="badge bg-white text-primary">{{ results.ai_analysis.experience_rating }} Fit</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h5>Summary</h5>
+                    <p class="">{{ results.ai_analysis.summary }}</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-success fw-bold">Key Strengths</h6>
+                        <ul class="list-group list-group-flush mb-3">
+                            {% for strength in results.ai_analysis.strengths %}
+                            <li class="list-group-item border-0 ps-0"><i
+                                    class="bi bi-check-circle-fill text-success me-2"></i>{{ strength }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-danger fw-bold">Missing Skills</h6>
+                        <ul class="list-group list-group-flush mb-3">
+                            {% for skill in results.ai_analysis.missing_skills %}
+                            <li class="list-group-item border-0 ps-0"><i
+                                    class="bi bi-exclamation-circle-fill text-danger me-2"></i>{{ skill }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-info fw-bold">Actionable Suggestions</h6>
+                        <ul class="list-group list-group-flush mb-3">
+                            {% for tip in results.ai_analysis.suggestions %}
+                            <li class="list-group-item border-0 ps-0"><i
+                                    class="bi bi-caret-right-fill text-info me-2"></i>{{ tip }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
