@@ -72,6 +72,7 @@ class KeywordScorer(BaseScorer):
         return {
             "score": final_score,
             "match_count": len(matches),
+            "missing_count": len(missing),
             "total_keywords": len(jd_keywords),
             "matches": list(matches),
             "missing": list(missing)

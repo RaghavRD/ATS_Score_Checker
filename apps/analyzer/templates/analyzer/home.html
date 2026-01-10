@@ -1,62 +1,140 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="text-center mb-5">
-    <h1 class="display-4 fw-bold text-primary">Rank My CV</h1>
-    <p class="lead text-muted">Simulate how an ATS reads your resume.</p>
+<div class="text-center mb-5 animate-fade-in">
+    <h1 class="display-4 fw-bold text-primary mb-3">Rank My CV</h1>
+    <p class="lead text-muted fs-4">Simulate how an ATS reads your resume.</p>
 </div>
 
 {% include 'analyzer/dashboard_snippet.html' %}
 
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <div class="card rounded-3 shadow-sm mb-4">
+        <div class="glass-card p-4 mb-4 animate-slide-up">
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
                     {% csrf_token %}
-                    <div class="row">
-                        <div class="col-6">
+                    <div class="row g-4">
+                        <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="{{ form.job_description.id_for_label }}" class="form-label fw-bold">Job
-                                    Description</label>
+                                <label for="{{ form.job_description.id_for_label }}" class="form-label fw-bold mb-2">
+                                    <i class="bi bi-file-text me-2 text-primary"></i>Job Description
+                                </label>
                                 {{ form.job_description }}
                                 {% if form.job_description.errors %}
-                                <div class="text-danger small">{{ form.job_description.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.job_description.errors }}</div>
                                 {% endif %}
+                                <div class="form-text">Paste the job description here.</div>
                             </div>
                         </div>
 
-                        <div class="col-6">
-                            <div class="mb-4">
-                                <label for="{{ form.resume.id_for_label }}" class="form-label fw-bold">Upload
-                                    Resume</label>
-                                {{ form.resume }}
-                                {% if form.resume.errors %}
-                                <div class="text-danger small">{{ form.resume.errors }}</div>
-                                {% endif %}
-                                <div class="form-text">Supported formats: PDF, DOCX</div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold mb-2">
+                                <i class="bi bi-file-earmark-person me-2 text-primary"></i>Upload Resume
+                            </label>
+
+                            <div class="upload-zone" id="dropZone">
+                                <div class="text-center">
+                                    <i class="bi bi-cloud-arrow-up"></i>
+                                    <h5 class="fw-bold mb-2">Drag & Drop Resume</h5>
+                                    <p class="text-muted small mb-3">Supported formats: PDF, DOCX</p>
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4"
+                                        onclick="document.getElementById('{{ form.resume.id_for_label }}').click()">
+                                        Browse Files
+                                    </button>
+                                </div>
+                                <div id="fileName" class="mt-3 fw-bold text-success d-none"></div>
                             </div>
+
+                            <div class="d-none">
+                                {{ form.resume }}
+                            </div>
+
+                            {% if form.resume.errors %}
+                            <div class="text-danger small mt-2 text-center">{{ form.resume.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn">Analyze Resume</button>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-lg">
+                            <i class="bi bi-search me-2"></i>Analyze Resume
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
         {% if success %}
-        <div class="card shadow-sm border-success">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">Extraction Successful</h5>
+        <div class="glass-card mb-4 border-success animate-fade-in">
+            <div class="glass-card-header bg-success-subtle text-success border-bottom-0">
+                <h5 class="mb-0"><i class="bi bi-check-circle-fill me-2"></i>Extraction Successful</h5>
             </div>
             <div class="card-body">
-                <h6>Extracted Text Preview:</h6>
-                <pre class="bg-dark text-light p-3 rounded"
-                    style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">{{ extracted_text }}</pre>
+                <h6 class="text-muted mb-3">Extracted Text Preview:</h6>
+                <pre class="bg-dark text-light p-3 rounded-3 shadow-inner"
+                    style="white-space: pre-wrap; max-height: 400px; overflow-y: auto; font-size: 0.9rem;">{{ extracted_text }}</pre>
             </div>
         </div>
         {% endif %}
     </div>
 </div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('{{ form.resume.id_for_label }}');
+    const fileNameDisplay = document.getElementById('fileName');
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Highlight drop zone when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dropZone.classList.add('dragover');
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('dragover');
+    }
+
+    // Handle dropped files
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        updateFileName(files[0]);
+    }
+
+    // Handle selected files via button
+    fileInput.addEventListener('change', function () {
+        updateFileName(this.files[0]);
+    });
+
+    function updateFileName(file) {
+        if (file) {
+            fileNameDisplay.innerHTML = `<i class="bi bi-file-earmark-check me-2"></i>${file.name}`;
+            fileNameDisplay.classList.remove('d-none');
+        } else {
+            fileNameDisplay.classList.add('d-none');
+        }
+    }
+</script>
 {% endblock %}

@@ -54,6 +54,12 @@ class ResumeUploadView(LoginRequiredMixin, View):
                     # Log error but don't fail the request
                     print(f"Error saving history: {e}")
 
+                # DEBUG: Print the analysis result to console
+                # print("DEBUG - Analysis Result Keywords:")
+                # print(analysis_result)
+                # print(f"  matches: {analysis_result.get('details', {}).get('keywords', {}).get('matches', 'NOT FOUND')}")
+                # print(f"  missing: {analysis_result.get('details', {}).get('keywords', {}).get('missing', 'NOT FOUND')}")
+                
                 return render(request, 'analyzer/results.html', {
                     'results': analysis_result,
                     'extracted_text': resume_data['full_text'], # Pass full text for debugging/display
