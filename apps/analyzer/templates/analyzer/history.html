@@ -1,78 +1,118 @@
 {% extends 'base.html' %}
 
-{% block title %}Scan History - Rank My CV{% endblock %}
+{% block title %}Scan History — RankMyCV{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Scan History</h1>
-    <a href="{% url 'analyzer:home' %}" class="btn btn-primary">New Analysis</a>
+
+<!-- ── Header ───────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5 animate-fade-in">
+    <div>
+        <p class="section-label mb-1"><i class="bi bi-clock-history me-1"></i>Your Activity</p>
+        <h1 style="font-size:1.9rem;margin:0;">Scan History</h1>
+    </div>
+    <a href="{% url 'analyzer:home' %}" class="btn btn-primary rounded-pill px-4">
+        <i class="bi bi-plus-lg me-2"></i>New Analysis
+    </a>
 </div>
 
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+<!-- ── Card Grid ─────────────────────────────────────────────── -->
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 animate-slide-up">
+
     {% for scan in object_list %}
+    {% with score=scan.final_score %}
     <div class="col">
-        <div class="card h-100 shadow-sm border-0 hover-lift">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        <small class="text-muted">{{ scan.created_at|date:"M d, Y" }}</small>
-                        <h5 class="card-title text-truncate mb-0" title="{{ scan.resume_filename }}"
-                            style="max-width: 200px;">
-                            {{ scan.resume_filename }}
-                        </h5>
-                    </div>
-                    <span
-                        class="badge rounded-pill {% if scan.final_score >= 80 %}bg-success{% elif scan.final_score >= 50 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
-                        {{ scan.final_score }}%
-                    </span>
+        <div class="history-card">
+
+            <!-- Top row: file name + date -->
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                <div style="min-width:0;">
+                    <p style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:0 0 0.2rem;">
+                        {{ scan.created_at|date:"M d, Y" }}
+                    </p>
+                    <h6 class="text-truncate mb-0" title="{{ scan.resume_filename }}"
+                        style="font-weight:700;color:var(--text-1);font-size:0.95rem;">
+                        <i class="bi bi-file-earmark-text me-1" style="color:var(--text-3);"></i>
+                        {{ scan.resume_filename }}
+                    </h6>
                 </div>
 
-                <div class="d-flex justify-content-between text-center small text-muted mb-3">
-                    <div>
-                        <div class="fw-bold text-dark">{{ scan.keyword_score }}%</div>
-                        Keywords
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark">{{ scan.semantic_score }}%</div>
-                        Semantic
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark">{{ scan.formatting_score }}%</div>
-                        Format
-                    </div>
+                <!-- Score ring -->
+                <div class="mini-score-ring flex-shrink-0
+                    {% if score >= 90 %}ring-s
+                    {% elif score >= 75 %}ring-a
+                    {% elif score >= 60 %}ring-b
+                    {% elif score >= 45 %}ring-c
+                    {% else %}ring-d{% endif %}">
+                    {{ score|floatformat:0 }}
+                    <small>%</small>
                 </div>
-
-                <p class="card-text small text-muted text-truncate">
-                    JD: {{ scan.job_description_snippet }}
-                </p>
-
             </div>
-            <div class="card-footer bg-transparent border-top-0">
-                <!-- Future Feature: Link to view detailed report again if we persist it well -->
-                <button class="btn btn-sm btn-outline-primary w-100" disabled>View Details (Coming Soon)</button>
+
+            <!-- JD snippet -->
+            <p class="text-truncate mb-0"
+                style="font-size:0.8rem;color:var(--text-3);line-height:1.5;" title="{{ scan.job_description_snippet }}">
+                {{ scan.job_description_snippet }}
+            </p>
+
+            <!-- Sub-scores -->
+            <div class="sub-score-row">
+                <div class="sub-score-item">
+                    <span class="val">{{ scan.keyword_score }}%</span>
+                    <span class="lbl">Keywords</span>
+                </div>
+                <div class="sub-score-item">
+                    <span class="val">{{ scan.semantic_score }}%</span>
+                    <span class="lbl">Semantic</span>
+                </div>
+                <div class="sub-score-item">
+                    <span class="val">{{ scan.formatting_score }}%</span>
+                    <span class="lbl">Format</span>
+                </div>
+            </div>
+
+            <!-- Grade badge row -->
+            <div class="d-flex align-items-center justify-content-between mt-3 pt-3"
+                style="border-top:1px solid var(--card-border);">
+                <span style="
+                    font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+                    padding:0.25rem 0.65rem;border-radius:99px;
+                    {% if score >= 90 %}color:var(--tier-s);background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);
+                    {% elif score >= 75 %}color:var(--tier-a);background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);
+                    {% elif score >= 60 %}color:var(--tier-b);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);
+                    {% elif score >= 45 %}color:var(--tier-c);background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);
+                    {% else %}color:var(--tier-d);background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);
+                    {% endif %}">
+                    {% if score >= 90 %}S — Outstanding
+                    {% elif score >= 75 %}A — Strong
+                    {% elif score >= 60 %}B — Good
+                    {% elif score >= 45 %}C — Fair
+                    {% else %}D — Needs Work{% endif %}
+                </span>
+                <button class="btn btn-outline-secondary btn-sm rounded-pill" disabled
+                    style="font-size:0.75rem;opacity:0.5;">
+                    Details Soon
+                </button>
             </div>
         </div>
     </div>
+    {% endwith %}
+
     {% empty %}
-    <div class="col-12 text-center py-5">
-        <div class="text-muted mb-3">
-            <i class="bi bi-file-earmark-x display-1"></i>
+    <div class="col-12">
+        <div class="empty-state animate-fade-in">
+            <div class="empty-state-icon">
+                <i class="bi bi-file-earmark-x"></i>
+            </div>
+            <h4 style="font-weight:700;margin-bottom:0.5rem;">No scans yet</h4>
+            <p style="color:var(--text-3);max-width:320px;margin:0 auto 1.5rem;">
+                Upload your first resume to see your ATS score and insights here.
+            </p>
+            <a href="{% url 'analyzer:home' %}" class="btn btn-primary rounded-pill px-5">
+                Start Your First Analysis
+            </a>
         </div>
-        <h4>No analysis history found.</h4>
-        <p class="text-muted">Upload your first resume to see insights here!</p>
-        <a href="{% url 'analyzer:home' %}" class="btn btn-primary mt-2">Start Analysis</a>
     </div>
     {% endfor %}
+
 </div>
-
-<style>
-    .hover-lift {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .hover-lift:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
-    }
-</style>
 {% endblock %}

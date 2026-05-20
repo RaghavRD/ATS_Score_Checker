@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'apps.core',
     'apps.analyzer',
     'apps.accounts',
+    'apps.jobs',
 ]
 
 LOGIN_REDIRECT_URL = 'analyzer:home'

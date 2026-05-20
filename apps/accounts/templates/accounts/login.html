@@ -1,52 +1,61 @@
 {% extends 'base.html' %}
 
-{% block title %}Login - Rank My CV{% endblock %}
+{% block title %}Sign In — RankMyCV{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">Login</h3>
-                <form method="post">
-                    {% csrf_token %}
+<div class="auth-wrap animate-fade-in">
+    <div class="auth-card">
 
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        {% for error in form.non_field_errors %}
-                        {{ error }}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
+        <!-- Logo -->
+        <div class="auth-logo">RankMyCV</div>
 
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}
-                        <div class="text-danger small">
-                            {{ field.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
+        <!-- Title -->
+        <h2 class="auth-title">Welcome back</h2>
+        <p class="auth-subtitle">Sign in to continue to your account</p>
 
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary">Login</button>
-                    </div>
-                </form>
-                <div class="text-center mt-3">
-                    <p>Don't have an account? <a href="{% url 'signup' %}">Sign up here</a></p>
-                </div>
-            </div>
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-4" style="font-size:0.875rem;">
+            <i class="bi bi-exclamation-circle me-2"></i>
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
         </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div style="color:var(--danger);font-size:0.8rem;margin-top:0.35rem;">
+                    {{ field.errors.0 }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="d-grid mt-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Sign In <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+
+        <div class="auth-divider">or</div>
+
+        <p style="text-align:center;font-size:0.875rem;color:var(--text-3);margin:0;">
+            Don't have an account?
+            <a href="{% url 'signup' %}" style="color:var(--primary-light);font-weight:600;">
+                Create one free
+            </a>
+        </p>
     </div>
 </div>
+
 <script>
-    // Add bootstrap class to inputs
-    var inputs = document.querySelectorAll('input');
-    inputs.forEach(function (input) {
-        input.classList.add('form-control');
+    document.querySelectorAll('input').forEach(el => {
+        el.classList.add('form-control');
     });
 </script>
 {% endblock %}

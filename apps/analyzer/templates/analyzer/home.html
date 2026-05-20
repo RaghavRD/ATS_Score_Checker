@@ -1,140 +1,247 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="text-center mb-5 animate-fade-in">
-    <h1 class="display-4 fw-bold text-primary mb-3">Rank My CV</h1>
-    <p class="lead text-muted fs-4">Simulate how an ATS reads your resume.</p>
-</div>
+{% block title %}RankMyCV — Beat the ATS{% endblock %}
 
+{% block content %}
+
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<section class="hero-section animate-fade-in">
+    <div class="hero-eyebrow">
+        <i class="bi bi-stars"></i> AI-Powered Resume Analysis
+    </div>
+    <h1 class="hero-title">
+        Find Out Why You're<br>
+        <span class="gradient-text">Getting Ghosted.</span>
+    </h1>
+    <p class="hero-subtitle">
+        Paste a job description, upload your resume — get a full ATS compatibility
+        score with actionable fixes in seconds.
+    </p>
+    <div class="hero-proof">
+        <span class="hero-proof-item"><i class="bi bi-check-circle-fill"></i> Keyword matching</span>
+        <span class="hero-proof-item"><i class="bi bi-check-circle-fill"></i> AI-powered critique</span>
+        <span class="hero-proof-item"><i class="bi bi-check-circle-fill"></i> Interview prep</span>
+        <span class="hero-proof-item"><i class="bi bi-check-circle-fill"></i> Free to start</span>
+    </div>
+</section>
+
+<!-- ── Dashboard Stats ───────────────────────────────────────── -->
 {% include 'analyzer/dashboard_snippet.html' %}
 
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="glass-card p-4 mb-4 animate-slide-up">
-            <div class="card-body">
+<!-- ── Upload Form ───────────────────────────────────────────── -->
+<div class="row justify-content-center animate-slide-up">
+    <div class="col-xl-10">
+        <div class="glass-card p-0 overflow-hidden">
+
+            <!-- Card header -->
+            <div class="glass-card-header d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="mb-0">Analyze Your Resume</h5>
+                    <p class="mb-0 mt-1" style="font-size:0.8rem;color:var(--text-3);">
+                        Fill in both fields and hit analyze — takes about 10 seconds.
+                    </p>
+                </div>
+                <div class="d-none d-md-flex align-items-center gap-2">
+                    <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+                    <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+                    <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                </div>
+            </div>
+
+            <div class="p-4 p-md-5">
                 <form method="post" enctype="multipart/form-data" id="uploadForm">
                     {% csrf_token %}
-                    <div class="row g-4">
+                    <div class="row g-4 g-lg-5">
+
+                        <!-- Job Description -->
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="{{ form.job_description.id_for_label }}" class="form-label fw-bold mb-2">
-                                    <i class="bi bi-file-text me-2 text-primary"></i>Job Description
-                                </label>
+                            <p class="section-label"><i class="bi bi-file-text me-1"></i>Job Description</p>
+                            <div class="position-relative">
                                 {{ form.job_description }}
-                                {% if form.job_description.errors %}
-                                <div class="text-danger small mt-1">{{ form.job_description.errors }}</div>
-                                {% endif %}
-                                <div class="form-text">Paste the job description here.</div>
                             </div>
+                            {% if form.job_description.errors %}
+                            <div class="mt-2" style="color:var(--danger);font-size:0.8rem;">
+                                {{ form.job_description.errors }}
+                            </div>
+                            {% endif %}
+                            <p style="font-size:0.78rem;color:var(--text-3);margin-top:0.5rem;">
+                                Paste the full job description — the more detail, the better.
+                            </p>
                         </div>
 
+                        <!-- Resume Upload -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold mb-2">
-                                <i class="bi bi-file-earmark-person me-2 text-primary"></i>Upload Resume
-                            </label>
+                            <p class="section-label"><i class="bi bi-file-earmark-person me-1"></i>Your Resume</p>
 
-                            <div class="upload-zone" id="dropZone">
-                                <div class="text-center">
-                                    <i class="bi bi-cloud-arrow-up"></i>
-                                    <h5 class="fw-bold mb-2">Drag & Drop Resume</h5>
-                                    <p class="text-muted small mb-3">Supported formats: PDF, DOCX</p>
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4"
-                                        onclick="document.getElementById('{{ form.resume.id_for_label }}').click()">
-                                        Browse Files
-                                    </button>
+                            <div class="upload-zone" id="dropZone"
+                                onclick="document.getElementById('{{ form.resume.id_for_label }}').click()">
+                                <div class="upload-icon-wrap">
+                                    <i class="bi bi-cloud-arrow-up" id="uploadIcon"></i>
                                 </div>
-                                <div id="fileName" class="mt-3 fw-bold text-success d-none"></div>
+                                <h5 id="uploadTitle">Drag & Drop Resume</h5>
+                                <p>PDF or DOCX &mdash; max 5 MB</p>
+
+                                <div id="fileName" class="mt-3 d-none"
+                                    style="color:var(--success);font-size:0.875rem;font-weight:600;">
+                                </div>
                             </div>
 
-                            <div class="d-none">
-                                {{ form.resume }}
-                            </div>
+                            <div class="d-none">{{ form.resume }}</div>
 
                             {% if form.resume.errors %}
-                            <div class="text-danger small mt-2 text-center">{{ form.resume.errors }}</div>
+                            <div class="mt-2 text-center" style="color:var(--danger);font-size:0.8rem;">
+                                {{ form.resume.errors }}
+                            </div>
                             {% endif %}
                         </div>
                     </div>
 
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-lg">
-                            <i class="bi bi-search me-2"></i>Analyze Resume
+                    <!-- Submit -->
+                    <div class="d-grid mt-5">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="bi bi-cpu me-2"></i>Analyze My Resume
                         </button>
                     </div>
+
+                    <!-- Loading state (hidden by default) -->
+                    <div id="loadingState" class="text-center mt-4 d-none">
+                        <div class="d-flex align-items-center justify-content-center gap-3"
+                            style="color:var(--text-3);font-size:0.875rem;">
+                            <div class="spinner-border spinner-border-sm" style="color:var(--primary);" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span id="loadingText">Extracting resume text…</span>
+                        </div>
+                    </div>
+
                 </form>
             </div>
         </div>
-
-        {% if success %}
-        <div class="glass-card mb-4 border-success animate-fade-in">
-            <div class="glass-card-header bg-success-subtle text-success border-bottom-0">
-                <h5 class="mb-0"><i class="bi bi-check-circle-fill me-2"></i>Extraction Successful</h5>
-            </div>
-            <div class="card-body">
-                <h6 class="text-muted mb-3">Extracted Text Preview:</h6>
-                <pre class="bg-dark text-light p-3 rounded-3 shadow-inner"
-                    style="white-space: pre-wrap; max-height: 400px; overflow-y: auto; font-size: 0.9rem;">{{ extracted_text }}</pre>
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 
+<!-- ── How It Works ──────────────────────────────────────────── -->
+<div class="row justify-content-center mt-5 animate-slide-up-2">
+    <div class="col-xl-10">
+        <p class="section-label text-center mb-4">How It Works</p>
+        <div class="row g-3 text-center">
+            {% for step in steps %}{% endfor %}
+            <div class="col-md-4">
+                <div class="glass-card p-4">
+                    <div style="width:48px;height:48px;border-radius:50%;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.25rem;color:var(--primary-light);">
+                        <i class="bi bi-clipboard-data"></i>
+                    </div>
+                    <h6 style="font-weight:700;">Paste Job Description</h6>
+                    <p style="font-size:0.83rem;color:var(--text-3);margin:0;">
+                        Copy any job posting directly from LinkedIn, Indeed, or a company site.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card p-4">
+                    <div style="width:48px;height:48px;border-radius:50%;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.25rem;color:var(--violet);">
+                        <i class="bi bi-upload"></i>
+                    </div>
+                    <h6 style="font-weight:700;">Upload Your Resume</h6>
+                    <p style="font-size:0.83rem;color:var(--text-3);margin:0;">
+                        We accept PDF and DOCX. Your file is processed securely and never stored publicly.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card p-4">
+                    <div style="width:48px;height:48px;border-radius:50%;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.25rem;color:var(--success);">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h6 style="font-weight:700;">Get Your Score & Fix It</h6>
+                    <p style="font-size:0.83rem;color:var(--text-3);margin:0;">
+                        See your ATS score, missing keywords, and AI-generated rewrites in seconds.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if success %}
+<div class="row justify-content-center mt-4 animate-fade-in">
+    <div class="col-xl-10">
+        <div class="glass-card" style="border-color:rgba(34,197,94,0.3);">
+            <div class="glass-card-header" style="background:rgba(34,197,94,0.06);">
+                <h6 class="mb-0" style="color:var(--success);">
+                    <i class="bi bi-check-circle-fill me-2"></i>Extraction Successful — Text Preview
+                </h6>
+            </div>
+            <div class="p-4">
+                <pre style="max-height:320px;overflow-y:auto;">{{ extracted_text }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('{{ form.resume.id_for_label }}');
-    const fileNameDisplay = document.getElementById('fileName');
+    const dropZone   = document.getElementById('dropZone');
+    const fileInput  = document.getElementById('{{ form.resume.id_for_label }}');
+    const fileNameEl = document.getElementById('fileName');
+    const uploadIcon = document.getElementById('uploadIcon');
+    const uploadTitle= document.getElementById('uploadTitle');
+    const submitBtn  = document.getElementById('submitBtn');
+    const loadingState = document.getElementById('loadingState');
 
-    // Prevent default drag behaviors
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    // Style the textarea to match our theme
+    const ta = document.getElementById('{{ form.job_description.id_for_label }}');
+    if (ta) {
+        ta.classList.add('form-control');
+        ta.style.minHeight = '220px';
     }
 
-    // Highlight drop zone when item is dragged over it
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, highlight, false);
+    // Drag & drop
+    ['dragenter','dragover','dragleave','drop'].forEach(evt => {
+        dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+        document.body.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
     });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, unhighlight, false);
+    ['dragenter','dragover'].forEach(evt =>
+        dropZone.addEventListener(evt, () => dropZone.classList.add('dragover'))
+    );
+    ['dragleave','drop'].forEach(evt =>
+        dropZone.addEventListener(evt, () => dropZone.classList.remove('dragover'))
+    );
+    dropZone.addEventListener('drop', e => {
+        fileInput.files = e.dataTransfer.files;
+        updateFileName(e.dataTransfer.files[0]);
     });
-
-    function highlight(e) {
-        dropZone.classList.add('dragover');
-    }
-
-    function unhighlight(e) {
-        dropZone.classList.remove('dragover');
-    }
-
-    // Handle dropped files
-    dropZone.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        fileInput.files = files;
-        updateFileName(files[0]);
-    }
-
-    // Handle selected files via button
-    fileInput.addEventListener('change', function () {
-        updateFileName(this.files[0]);
-    });
+    fileInput.addEventListener('change', function () { updateFileName(this.files[0]); });
 
     function updateFileName(file) {
-        if (file) {
-            fileNameDisplay.innerHTML = `<i class="bi bi-file-earmark-check me-2"></i>${file.name}`;
-            fileNameDisplay.classList.remove('d-none');
-        } else {
-            fileNameDisplay.classList.add('d-none');
-        }
+        if (!file) return;
+        uploadIcon.className = 'bi bi-file-earmark-check';
+        uploadTitle.textContent = file.name;
+        fileNameEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>${(file.size/1024).toFixed(0)} KB`;
+        fileNameEl.classList.remove('d-none');
+        dropZone.style.borderColor = 'var(--success)';
+        dropZone.style.background  = 'rgba(34,197,94,0.05)';
     }
+
+    // Loading state on submit
+    const loadingMessages = [
+        'Extracting resume text…',
+        'Matching keywords…',
+        'Running AI analysis…',
+        'Calculating your score…',
+    ];
+    let msgIdx = 0;
+    document.getElementById('uploadForm').addEventListener('submit', function () {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Analyzing…';
+        loadingState.classList.remove('d-none');
+        setInterval(() => {
+            msgIdx = (msgIdx + 1) % loadingMessages.length;
+            document.getElementById('loadingText').textContent = loadingMessages[msgIdx];
+        }, 2500);
+    });
 </script>
 {% endblock %}

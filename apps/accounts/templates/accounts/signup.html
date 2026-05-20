@@ -1,45 +1,62 @@
 {% extends 'base.html' %}
 
-{% block title %}Sign Up - Rank My CV{% endblock %}
+{% block title %}Create Account — RankMyCV{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">Create Account</h3>
-                <form method="post">
-                    {% csrf_token %}
+<div class="auth-wrap animate-fade-in">
+    <div class="auth-card">
 
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                        {# Simple rendering for signup since UserCreationForm is complex; likely needs manual widget
-                        tweaking or crispy forms later #}
-                        {% if field.help_text %}
-                        <div class="form-text small text-muted">{{ field.help_text }}</div>
-                        {% endif %}
-                        {% for error in field.errors %}
-                        <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    {% endfor %}
+        <!-- Logo -->
+        <div class="auth-logo">RankMyCV</div>
 
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-success">Sign Up</button>
-                    </div>
-                </form>
-                <div class="text-center mt-3">
-                    <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
-                </div>
+        <!-- Title -->
+        <h2 class="auth-title">Create your account</h2>
+        <p class="auth-subtitle">Free forever — no credit card required</p>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                <p style="font-size:0.75rem;color:var(--text-3);margin-top:0.35rem;">{{ field.help_text }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                <div style="color:var(--danger);font-size:0.8rem;margin-top:0.35rem;">{{ error }}</div>
+                {% endfor %}
             </div>
-        </div>
+            {% endfor %}
+
+            <!-- Terms note -->
+            <p style="font-size:0.75rem;color:var(--text-3);margin-bottom:1.25rem;line-height:1.5;">
+                By creating an account you agree to our
+                <a href="#" style="color:var(--text-2);">Terms of Service</a> and
+                <a href="#" style="color:var(--text-2);">Privacy Policy</a>.
+            </p>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Create Account <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+
+        <div class="auth-divider">or</div>
+
+        <p style="text-align:center;font-size:0.875rem;color:var(--text-3);margin:0;">
+            Already have an account?
+            <a href="{% url 'login' %}" style="color:var(--primary-light);font-weight:600;">
+                Sign in
+            </a>
+        </p>
     </div>
 </div>
 
 <script>
-    // Quick script to add Bootstrap classes to standard Django form fields
-    document.querySelectorAll('input, select, textarea').forEach(e => e.classList.add('form-control'));
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        el.classList.add('form-control');
+    });
 </script>
 {% endblock %}

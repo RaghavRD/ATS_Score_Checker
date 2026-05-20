@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>Personalized Job Search</h2>
+            <p class="text-muted">Jobs tailored to your resume's skills and experience.</p>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            Better Filters = Better Matches
+        </div>
+        <div class="card-body">
+            <form id="jobSearchForm" class="row g-3">
+                <input type="hidden" name="analysis_id" value="{{ analysis_id|default:'' }}">
+                
+                <div class="col-md-4">
+                    <label for="title_filter" class="form-label">Job Title</label>
+                    <input type="text" class="form-control" id="title_filter" name="title_filter" 
+                           value="{{ filters.title|default:'' }}" placeholder="e.g. Python Developer">
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="location_filter" class="form-label">Location</label>
+                    <input type="text" class="form-control" id="location_filter" name="location_filter" 
+                           value="{{ filters.location|default:'' }}" placeholder="e.g. India, Remote">
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="keywords" class="form-label">Keywords (Skills)</label>
+                    <input type="text" class="form-control" id="keywords" name="keywords" 
+                           value="{{ filters.keywords|join:', '|default:'' }}" placeholder="Comma separated">
+                </div>
+                
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary" id="searchBtn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Search Jobs
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsContainer" class="row">
+        <!-- Results will be loaded here -->
+        <div class="col-12 text-center text-muted mt-5">
+            <p>Adjust filters and click search to find jobs.</p>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('jobSearchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('searchBtn');
+    const spinner = btn.querySelector('.spinner-border');
+    const container = document.getElementById('resultsContainer');
+    
+    // UI Loading State
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Searching & calculating match scores...</p></div>';
+    
+    // Build Query
+    const formData = new FormData(e.target);
+    const params = new URLSearchParams(formData);
+    
+    fetch(`/jobs/api/search/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            container.innerHTML = '';
+            if (!data.jobs || data.jobs.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><p>No jobs found. Try broadening your filters.</p></div>';
+                return;
+            }
+            
+            data.jobs.forEach(job => {
+                const matchScore = job.match_score ? `<span class="badge bg-success mb-2">Match: ${job.match_score}%</span>` : '';
+                const location = job.locations_derived ? job.locations_derived.join(', ') : (job.location_filter || 'Location N/A');
+                
+                const card = `
+                    <div class="col-md-12 mb-3">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h5 class="card-title text-primary"><a href="${job.url}" target="_blank" class="text-decoration-none">${job.title}</a></h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">${job.organization || 'Unknown Company'}</h6>
+                                    </div>
+                                    ${matchScore}
+                                </div>
+                                <p class="card-text small text-muted mb-2">
+                                    <i class="bi bi-geo-alt"></i> ${location} | 
+                                    <i class="bi bi-clock"></i> ${new Date(job.date_posted).toLocaleDateString()}
+                                </p>
+                                <p class="card-text text-truncate" style="max-height: 3em; overflow: hidden;">
+                                    ${job.description_text || 'No description available.'}
+                                </p>
+                                <a href="${job.url}" target="_blank" class="btn btn-sm btn-outline-primary">Apply Now</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            container.innerHTML = '<div class="col-12 text-center text-danger"><p>Something went wrong. Please try again.</p></div>';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+        });
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,179 +1,182 @@
 {% extends 'base.html' %}
 
-{% block title %}Analysis Results - Rank My CV{% endblock %}
+{% block title %}Analysis Results — RankMyCV{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 animate-fade-in">
-    <h1>Analysis Results</h1>
-    <a href="{% url 'analyzer:home' %}" class="btn btn-outline-secondary rounded-pill px-4">Upload New Resume</a>
+
+<!-- ── Page Header ───────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5 animate-fade-in">
+    <div>
+        <p class="section-label mb-1"><i class="bi bi-cpu me-1"></i>Analysis Complete</p>
+        <h1 style="font-size:1.9rem;margin:0;">Your Resume Report</h1>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if analysis_obj %}
+        <a href="{% url 'jobs:board' %}?analysis_id={{ analysis_obj.id }}"
+            class="btn btn-primary rounded-pill px-4">
+            <i class="bi bi-briefcase-fill me-2"></i>Find Matching Jobs
+        </a>
+        {% endif %}
+        <a href="{% url 'analyzer:home' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>New Scan
+        </a>
+    </div>
 </div>
 
-<!-- Overall Score & Breakdown -->
-<div class="row mb-5 animate-slide-up">
-    <!-- Main Score Dial -->
-    <div class="col-md-5 mb-4 mb-md-0">
-        <div class="glass-card h-100 text-center p-4">
-            <h5 class="text-uppercase tracking-wider text-muted mb-4 fw-bold">ATS Compatibility Score</h5>
-            <div class="chart-container" style="position: relative; height: 250px; width: 250px; margin: 0 auto;">
-                <canvas id="scoreChart"></canvas>
+<!-- ── Score + Breakdown Row ─────────────────────────────────── -->
+<div class="row g-4 mb-4 animate-slide-up">
+
+    <!-- Main Score -->
+    <div class="col-lg-4">
+        <div class="glass-card h-100 p-4 text-center d-flex flex-column align-items-center justify-content-center">
+            <p class="section-label mb-3">ATS Compatibility Score</p>
+
+            <!-- Score Ring -->
+            <div class="score-ring-wrap mb-3">
+                <canvas id="scoreChart" width="220" height="220"></canvas>
                 <div class="score-center-text">
-                    <div class="display-3 fw-bold text-primary">{{ results.final_score|floatformat:0 }}<span
-                            class="fs-4">%</span></div>
-                    <small class="text-muted text-uppercase fw-bold">Match</small>
+                    <div class="score-number" id="scoreDisplay" style="color: var(--score-color, var(--primary-light));">
+                        0<span class="score-unit">%</span>
+                    </div>
+                    <small style="color:var(--text-3);font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">
+                        Match
+                    </small>
                 </div>
             </div>
-            <p class="mt-3 text-muted">
-                {% if results.final_score >= 80 %}
-                <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill"><i
-                        class="bi bi-check-circle-fill me-2"></i>Excellent Match</span>
-                {% elif results.final_score >= 50 %}
-                <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill"><i
-                        class="bi bi-exclamation-circle-fill me-2"></i>Good Potential</span>
-                {% else %}
-                <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill"><i
-                        class="bi bi-x-circle-fill me-2"></i>Needs Improvement</span>
-                {% endif %}
-            </p>
+
+            <!-- Grade Badge -->
+            <div class="grade-badge mb-3" id="gradeBadge">
+                <span id="gradeLetter">—</span>
+                <span class="grade-label" id="gradeLabel">Grade</span>
+            </div>
+
+            <!-- Grade description -->
+            <p id="gradeDesc" style="color:var(--text-3);font-size:0.85rem;max-width:220px;margin:0;"></p>
+
+            {% if analysis_obj %}
+            <div class="divider w-100"></div>
+            <a href="{% url 'jobs:board' %}?analysis_id={{ analysis_obj.id }}"
+                class="btn btn-outline-primary w-100 rounded-pill">
+                <i class="bi bi-search me-2"></i>View Matched Jobs
+            </a>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Breakdown Radar -->
-    <div class="col-md-7">
+    <!-- Score Breakdown -->
+    <div class="col-lg-8">
         <div class="glass-card h-100 p-4">
-            <h5 class="text-uppercase tracking-wider text-muted mb-4 fw-bold">Detailed Analysis</h5>
-            <div style="height: 300px;">
-                <canvas id="radarChart"></canvas>
+            <p class="section-label mb-4">Score Breakdown</p>
+
+            <div class="score-bar-row" id="bar-keywords">
+                <span class="score-bar-label">
+                    <i class="bi bi-key me-2" style="color:var(--primary-light);"></i>Keywords
+                </span>
+                <div class="score-bar-track">
+                    <div class="score-bar-fill" data-value="{{ results.breakdown.keyword_score }}"></div>
+                </div>
+                <span class="score-bar-value">{{ results.breakdown.keyword_score|floatformat:0 }}%</span>
+            </div>
+
+            <div class="score-bar-row" id="bar-semantic">
+                <span class="score-bar-label">
+                    <i class="bi bi-diagram-3 me-2" style="color:var(--violet);"></i>Semantic
+                </span>
+                <div class="score-bar-track">
+                    <div class="score-bar-fill" data-value="{{ results.breakdown.semantic_score }}"></div>
+                </div>
+                <span class="score-bar-value">{{ results.breakdown.semantic_score|floatformat:0 }}%</span>
+            </div>
+
+            <div class="score-bar-row" id="bar-formatting">
+                <span class="score-bar-label">
+                    <i class="bi bi-layout-text-window me-2" style="color:var(--cyan);"></i>Formatting
+                </span>
+                <div class="score-bar-track">
+                    <div class="score-bar-fill" data-value="{{ results.breakdown.formatting_score }}"></div>
+                </div>
+                <span class="score-bar-value">{{ results.breakdown.formatting_score|floatformat:0 }}%</span>
+            </div>
+
+            <hr class="divider">
+
+            <!-- Quick Stats -->
+            <div class="row g-3 text-center">
+                <div class="col-4">
+                    <div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:var(--radius-md);padding:0.75rem;">
+                        <div style="font-family:var(--font-heading);font-size:1.75rem;font-weight:800;color:var(--success);">
+                            {{ results.details.keywords.match_count }}
+                        </div>
+                        <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">
+                            Matched
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:var(--radius-md);padding:0.75rem;">
+                        <div style="font-family:var(--font-heading);font-size:1.75rem;font-weight:800;color:var(--danger);">
+                            {{ results.details.keywords.missing_count }}
+                        </div>
+                        <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">
+                            Missing
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:var(--radius-md);padding:0.75rem;">
+                        <div style="font-family:var(--font-heading);font-size:1.75rem;font-weight:800;color:var(--primary-light);">
+                            {{ results.ai_analysis.experience_rating }}
+                        </div>
+                        <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">
+                            Fit Level
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // --- Main Score Chart ---
-        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
-        const finalScore = {{ results.final_score }};
-    const remaining = 100 - finalScore;
-
-
-    let color = '#4f46e5'; // Primary
-    if (finalScore >= 80) color = '#10b981'; // Success
-    else if (finalScore < 50) color = '#ef4444'; // Danger
-    else color = '#f59e0b'; // Warning
-
-    new Chart(scoreCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Score', 'Remaining'],
-            datasets: [{
-                data: [finalScore, remaining],
-                backgroundColor: [color, '#e2e8f0'],
-                borderWidth: 0,
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '85%',
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
-            },
-            animation: {
-                animateScale: true,
-                animateRotate: true
-            }
-        }
-    });
-
-    // --- Radar Breakdown Chart ---
-    const radarCtx = document.getElementById('radarChart').getContext('2d');
-    new Chart(radarCtx, {
-        type: 'radar',
-        data: {
-            labels: [
-                'Keywords',
-                'Semantic Match',
-                'Formatting'
-            ],
-            datasets: [{
-                label: 'Resume Score',
-                data: [
-                    {{ results.breakdown.keyword_score }},
-                    {{ results.breakdown.semantic_score }},
-                    {{ results.breakdown.formatting_score }}
-                ],
-        fill: true,
-        backgroundColor: 'rgba(79, 70, 229, 0.2)',
-        borderColor: '#4f46e5',
-        pointBackgroundColor: '#4f46e5',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: '#4f46e5'
-                }]
-            },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false }
-        },
-        scales: {
-            r: {
-                angleLines: { color: 'rgba(0,0,0,0.05)' },
-                grid: { color: 'rgba(0,0,0,0.05)' },
-                pointLabels: {
-                    font: {
-                        size: 14,
-                        family: "'Outfit', sans-serif",
-                        weight: '600'
-                    },
-                    color: '#64748b'
-                },
-                suggestedMin: 0,
-                suggestedMax: 100,
-                ticks: {
-                    backdropColor: 'transparent',
-                    stepSize: 20
-                }
-            }
-        }
-    }
-        });
-    });
-</script>
-
-<!-- Keywords Section -->
-<div class="row mb-5 animate-slide-up">
-    <div class="col-md-6 mb-4 mb-md-0">
+<!-- ── Keywords Row ───────────────────────────────────────────── -->
+<div class="row g-4 mb-4 animate-slide-up-2">
+    <div class="col-md-6">
         <div class="glass-card h-100">
-            <div class="glass-card-header bg-success bg-opacity-10 text-success">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-check2-circle me-2"></i>Matched Keywords ({{ results.details.keywords.match_count }})</h5>
+            <div class="glass-card-header" style="background:rgba(34,197,94,0.05);border-bottom-color:rgba(34,197,94,0.15);">
+                <h6 class="mb-0 fw-bold" style="color:var(--success);">
+                    <i class="bi bi-check2-circle me-2"></i>
+                    Matched Keywords
+                    <span style="font-size:0.75rem;font-weight:500;color:var(--text-3);margin-left:0.4rem;">
+                        ({{ results.details.keywords.match_count }})
+                    </span>
+                </h6>
             </div>
-            <div class="card-body p-4">
+            <div class="p-4">
                 {% for word in results.details.keywords.matches %}
-                <span
-                    class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill me-1 mb-2 px-3 py-2">
-                    {{ word }}</span>
+                <span class="kw-tag matched"><i class="bi bi-check"></i>{{ word }}</span>
                 {% empty %}
-                <p class="text-muted fst-italic">No exact keyword matches found.</p>
+                <p style="color:var(--text-3);font-style:italic;margin:0;">No exact keyword matches found.</p>
                 {% endfor %}
             </div>
         </div>
     </div>
+
     <div class="col-md-6">
         <div class="glass-card h-100">
-            <div class="glass-card-header bg-danger bg-opacity-10 text-danger">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-x-circle me-2"></i>Missing Keywords ({{ results.details.keywords.missing_count }})</h5>
+            <div class="glass-card-header" style="background:rgba(239,68,68,0.05);border-bottom-color:rgba(239,68,68,0.15);">
+                <h6 class="mb-0 fw-bold" style="color:var(--danger);">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Missing Keywords
+                    <span style="font-size:0.75rem;font-weight:500;color:var(--text-3);margin-left:0.4rem;">
+                        ({{ results.details.keywords.missing_count }})
+                    </span>
+                </h6>
             </div>
-            <div class="card-body p-4">
+            <div class="p-4">
                 {% for word in results.details.keywords.missing %}
-                <span
-                    class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill me-1 mb-2 px-3 py-2">
-                    {{ word }}</span>
+                <span class="kw-tag missing"><i class="bi bi-plus"></i>{{ word }}</span>
                 {% empty %}
-                <p class="text-success fw-bold"><i class="bi bi-stars me-2"></i>Great job! No obvious missing keywords.
+                <p style="color:var(--success);font-weight:600;margin:0;">
+                    <i class="bi bi-stars me-2"></i>No obvious missing keywords — great job!
                 </p>
                 {% endfor %}
             </div>
@@ -181,229 +184,300 @@
     </div>
 </div>
 
-<!-- Formatting Issues -->
+<!-- ── Formatting Issues ──────────────────────────────────────── -->
 {% if results.details.formatting.issues %}
-<div class="glass-card mb-5 border-warning animate-slide-up">
-    <div class="glass-card-header bg-warning bg-opacity-10 text-warning">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-cone-striped me-2"></i>Formatting Improvements</h5>
+<div class="glass-card mb-4 animate-slide-up-2" style="border-color:rgba(245,158,11,0.25);">
+    <div class="glass-card-header" style="background:rgba(245,158,11,0.05);border-bottom-color:rgba(245,158,11,0.2);">
+        <h6 class="mb-0 fw-bold" style="color:var(--warning);">
+            <i class="bi bi-cone-striped me-2"></i>Formatting Improvements
+        </h6>
     </div>
-    <div class="card-body p-0">
-        <ul class="list-group list-group-flush rounded-bottom-4">
-            {% for issue in results.details.formatting.issues %}
-            <li class="list-group-item bg-transparent border-0 px-4 py-3"><i
-                    class="bi bi-caret-right-fill text-warning me-2"></i>{{ issue }}</li>
-            {% endfor %}
-        </ul>
+    <div class="p-4">
+        {% for issue in results.details.formatting.issues %}
+        <div class="issue-list-item">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>{{ issue }}</span>
+        </div>
+        {% endfor %}
     </div>
 </div>
 {% endif %}
 
-<!-- AI Analysis Section -->
-<div class="row mb-5 animate-slide-up">
-    <div class="col-12">
-        <div class="glass-card">
-            <div class="glass-card-header p-2 d-flex justify-content-between align-items-center">
-                <ul class="nav nav-pills card-header-pills m-0 p-1 bg-light rounded-pill border" id="aiTabs"
-                    role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-bold rounded-pill px-4" id="critique-tab" data-bs-toggle="tab"
-                            data-bs-target="#critique-pane" type="button" role="tab">
-                            <i class="bi bi-clipboard-data me-2"></i>Critique
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold rounded-pill px-4" id="tailor-tab" data-bs-toggle="tab"
-                            data-bs-target="#tailor-pane" type="button" role="tab">
-                            <i class="bi bi-magic me-2"></i>Tailor Resume
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold rounded-pill px-4" id="interview-tab" data-bs-toggle="tab"
-                            data-bs-target="#interview-pane" type="button" role="tab">
-                            <i class="bi bi-chat-dots me-2"></i>Interview Prep
-                        </button>
-                    </li>
-                </ul>
-                <div class="pe-3 d-none d-md-block">
-                    <span class="badge bg-primary px-3 py-2 rounded-pill shadow-sm">{{ results.ai_analysis.experience_rating }} Fit</span>
-                </div>
+<!-- ── AI Analysis Tabs ───────────────────────────────────────── -->
+<div class="glass-card mb-4 animate-slide-up-3">
+    <div class="glass-card-header">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="ai-tab-bar" id="aiTabBar">
+                <button class="ai-tab-btn active" data-pane="critique">
+                    <i class="bi bi-clipboard-data me-2"></i>Critique
+                </button>
+                <button class="ai-tab-btn" data-pane="tailor">
+                    <i class="bi bi-magic me-2"></i>Tailor Resume
+                </button>
+                <button class="ai-tab-btn" data-pane="interview">
+                    <i class="bi bi-chat-dots me-2"></i>Interview Prep
+                </button>
             </div>
+            <span style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:var(--primary-light);padding:0.3rem 0.85rem;border-radius:99px;font-size:0.75rem;font-weight:700;">
+                {{ results.ai_analysis.experience_rating }} Fit
+            </span>
+        </div>
+    </div>
 
-            <div class="card-body p-4">
-                <div class="tab-content" id="aiTabsContent">
-                    <!-- Tab 1: Critique (Existing) -->
-                    <div class="tab-pane fade show active" id="critique-pane" role="tabpanel">
-                        <div class="mb-4">
-                            <h5>Summary</h5>
-                            <p class="">{{ results.ai_analysis.summary }}</p>
-                        </div>
+    <div class="p-4">
 
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h6 class="text-success fw-bold">Key Strengths</h6>
-                                <ul class="list-group list-group-flush mb-3">
-                                    {% for strength in results.ai_analysis.strengths %}
-                                    <li class="list-group-item border-0 ps-0"><i
-                                            class="bi bi-check-circle-fill text-success me-2"></i>{{ strength }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            <div class="col-md-4">
-                                <h6 class="text-danger fw-bold">Missing Skills</h6>
-                                <ul class="list-group list-group-flush mb-3">
-                                    {% for skill in results.ai_analysis.missing_skills %}
-                                    <li class="list-group-item border-0 ps-0"><i
-                                            class="bi bi-exclamation-circle-fill text-danger me-2"></i>{{ skill }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            <div class="col-md-4">
-                                <h6 class="text-info fw-bold">Actionable Suggestions</h6>
-                                <ul class="list-group list-group-flush mb-3">
-                                    {% for tip in results.ai_analysis.suggestions %}
-                                    <li class="list-group-item border-0 ps-0"><i
-                                            class="bi bi-caret-right-fill text-info me-2"></i>{{ tip }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
+        <!-- Critique Pane -->
+        <div class="ai-pane" id="pane-critique">
+            <div class="mb-4">
+                <h6 style="font-weight:700;margin-bottom:0.5rem;">Summary</h6>
+                <p style="color:var(--text-2);line-height:1.7;margin:0;">{{ results.ai_analysis.summary }}</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h6 style="color:var(--success);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">
+                        <i class="bi bi-check-circle-fill me-1"></i> Key Strengths
+                    </h6>
+                    {% for strength in results.ai_analysis.strengths %}
+                    <div class="d-flex gap-2 mb-2 align-items-start" style="font-size:0.875rem;color:var(--text-2);">
+                        <i class="bi bi-check-circle-fill mt-1 flex-shrink-0" style="color:var(--success);font-size:0.75rem;"></i>
+                        <span>{{ strength }}</span>
                     </div>
-
-                    <!-- Tab 2: Tailor Resume (New) -->
-                    <div class="tab-pane fade" id="tailor-pane" role="tabpanel">
-                        {% if analysis_obj %}
-                        <div class="text-center py-4" id="tailor-initial">
-                            <i class="bi bi-stars display-4 text-warning mb-3"></i>
-                            <h4>Generate Tailored Content</h4>
-                            <p class="text-muted">Use AI to rewrite your summary and highlights specifically for this
-                                Job Description.</p>
-                            <button id="btn-tailor" class="btn btn-warning text-white fw-bold px-4"
-                                onclick="generateTailor('{{ analysis_obj.id }}')">
-                                <i class="bi bi-magic me-2"></i>Rewrite Resume Sections
-                            </button>
-                        </div>
-                        <div id="tailor-loading" class="text-center py-5 d-none">
-                            <div class="spinner-border text-warning" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <p class="mt-3 text-muted">Analyzing JS & Resume keywords...</p>
-                        </div>
-                        <div id="tailor-result" class="d-none">
-                            <!-- AI Content will be injected here -->
-                        </div>
-                        {% else %}
-                        <div class="alert alert-info">
-                            Please <a href="/login">log in</a> to use the AI Resume Tailor feature.
-                        </div>
-                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <h6 style="color:var(--danger);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">
+                        <i class="bi bi-x-circle-fill me-1"></i> Skill Gaps
+                    </h6>
+                    {% for skill in results.ai_analysis.missing_skills %}
+                    <div class="d-flex gap-2 mb-2 align-items-start" style="font-size:0.875rem;color:var(--text-2);">
+                        <i class="bi bi-x-circle-fill mt-1 flex-shrink-0" style="color:var(--danger);font-size:0.75rem;"></i>
+                        <span>{{ skill }}</span>
                     </div>
-
-                    <!-- Tab 3: Interview Prep (New) -->
-                    <div class="tab-pane fade" id="interview-pane" role="tabpanel">
-                        {% if analysis_obj %}
-                        <div class="text-center py-4" id="interview-initial">
-                            <i class="bi bi-person-video2 display-4 text-purple mb-3" style="color: #6f42c1;"></i>
-                            <h4>Mock Interview Questions</h4>
-                            <p class="text-muted">Generate specific technical and behavioral questions based on your
-                                resume gaps.</p>
-                            <button id="btn-interview" class="btn fw-bold px-4 text-white"
-                                style="background-color: #6f42c1;" onclick="generateInterview('{{ analysis_obj.id }}')">
-                                <i class="bi bi-play-circle me-2"></i>Generate Questions
-                            </button>
-                        </div>
-                        <div id="interview-loading" class="text-center py-5 d-none">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <p class="mt-3 text-muted">Preparing your interview...</p>
-                        </div>
-                        <div id="interview-result" class="d-none">
-                            <!-- AI Content will be injected here -->
-                        </div>
-                        {% else %}
-                        <div class="alert alert-info">
-                            Please <a href="/login">log in</a> to use the Interview Prep feature.
-                        </div>
-                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <h6 style="color:var(--cyan);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">
+                        <i class="bi bi-lightning-charge-fill me-1"></i> Quick Wins
+                    </h6>
+                    {% for tip in results.ai_analysis.suggestions %}
+                    <div class="d-flex gap-2 mb-2 align-items-start" style="font-size:0.875rem;color:var(--text-2);">
+                        <i class="bi bi-arrow-right-circle-fill mt-1 flex-shrink-0" style="color:var(--cyan);font-size:0.75rem;"></i>
+                        <span>{{ tip }}</span>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
+
+        <!-- Tailor Pane -->
+        <div class="ai-pane d-none" id="pane-tailor">
+            {% if analysis_obj %}
+            <div class="text-center py-4" id="tailor-initial">
+                <div style="width:64px;height:64px;border-radius:50%;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.75rem;color:var(--warning);">
+                    <i class="bi bi-stars"></i>
+                </div>
+                <h5 style="font-weight:700;">Generate Tailored Content</h5>
+                <p style="color:var(--text-3);max-width:420px;margin:0 auto 1.5rem;">
+                    AI rewrites your summary and bullet points to match this exact job description.
+                </p>
+                <button class="btn btn-primary px-5" onclick="generateTailor('{{ analysis_obj.id }}')">
+                    <i class="bi bi-magic me-2"></i>Rewrite My Resume Sections
+                </button>
+            </div>
+            <div id="tailor-loading" class="text-center py-5 d-none">
+                <div class="spinner-border mb-3" style="color:var(--warning);width:2.5rem;height:2.5rem;" role="status"></div>
+                <p style="color:var(--text-3);">Analyzing keywords and rewriting content…</p>
+            </div>
+            <div id="tailor-result" class="d-none"></div>
+            {% else %}
+            <div style="text-align:center;padding:3rem 1rem;">
+                <p style="color:var(--text-3);">
+                    Please <a href="{% url 'login' %}" style="color:var(--primary-light);">sign in</a> to use the AI Tailor feature.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Interview Pane -->
+        <div class="ai-pane d-none" id="pane-interview">
+            {% if analysis_obj %}
+            <div class="text-center py-4" id="interview-initial">
+                <div style="width:64px;height:64px;border-radius:50%;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.75rem;color:var(--violet);">
+                    <i class="bi bi-person-video2"></i>
+                </div>
+                <h5 style="font-weight:700;">Mock Interview Questions</h5>
+                <p style="color:var(--text-3);max-width:420px;margin:0 auto 1.5rem;">
+                    AI generates tailored technical and behavioral questions based on your gaps.
+                </p>
+                <button class="btn btn-primary px-5" onclick="generateInterview('{{ analysis_obj.id }}')">
+                    <i class="bi bi-play-circle me-2"></i>Generate Questions
+                </button>
+            </div>
+            <div id="interview-loading" class="text-center py-5 d-none">
+                <div class="spinner-border mb-3" style="color:var(--violet);width:2.5rem;height:2.5rem;" role="status"></div>
+                <p style="color:var(--text-3);">Preparing your mock interview…</p>
+            </div>
+            <div id="interview-result" class="d-none"></div>
+            {% else %}
+            <div style="text-align:center;padding:3rem 1rem;">
+                <p style="color:var(--text-3);">
+                    Please <a href="{% url 'login' %}" style="color:var(--primary-light);">sign in</a> to use Interview Prep.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
+(function () {
+    /* ── Score & Grade Config ─────────────────────────────── */
+    const finalScore = {{ results.final_score }};
+
+    function getGrade(s) {
+        if (s >= 90) return { letter:'S', label:'Outstanding', cls:'grade-s', color:'#22c55e', desc:'Top-tier match — apply with confidence.' };
+        if (s >= 75) return { letter:'A', label:'Strong',      cls:'grade-a', color:'#6366f1', desc:'Strong candidate — minor gaps to address.' };
+        if (s >= 60) return { letter:'B', label:'Good',        cls:'grade-b', color:'#f59e0b', desc:'Good potential — strengthen a few areas.' };
+        if (s >= 45) return { letter:'C', label:'Fair',        cls:'grade-c', color:'#f97316', desc:'Needs improvement — add missing keywords.' };
+        return              { letter:'D', label:'Weak',        cls:'grade-d', color:'#ef4444', desc:'Major gaps — significant rewrite needed.' };
     }
 
-    function generateTailor(id) {
+    function getBarClass(v) {
+        return v >= 70 ? 'bar-high' : v >= 45 ? 'bar-mid' : 'bar-low';
+    }
+
+    /* ── Score count-up animation ─────────────────────────── */
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const gradeBadge   = document.getElementById('gradeBadge');
+    const gradeLetter  = document.getElementById('gradeLetter');
+    const gradeLabel   = document.getElementById('gradeLabel');
+    const gradeDesc    = document.getElementById('gradeDesc');
+
+    let start = null;
+    const duration = 1400;
+
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+    function animateScore(ts) {
+        if (!start) start = ts;
+        const progress = Math.min((ts - start) / duration, 1);
+        const current  = Math.round(easeOut(progress) * finalScore);
+        scoreDisplay.innerHTML = `${current}<span class="score-unit">%</span>`;
+        if (progress < 1) {
+            requestAnimationFrame(animateScore);
+        } else {
+            // Reveal grade badge after count-up
+            const g = getGrade(finalScore);
+            document.documentElement.style.setProperty('--score-color', g.color);
+            scoreDisplay.style.color = g.color;
+            gradeBadge.className = `grade-badge ${g.cls}`;
+            gradeLetter.textContent = g.letter;
+            gradeLabel.textContent  = g.label;
+            gradeDesc.textContent   = g.desc;
+            gradeBadge.style.animation = 'fadeIn 0.4s ease-out forwards';
+        }
+    }
+    requestAnimationFrame(animateScore);
+
+    /* ── Score Ring (Chart.js) ────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function () {
+        const g   = getGrade(finalScore);
+        const ctx = document.getElementById('scoreChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [finalScore, 100 - finalScore],
+                    backgroundColor: [g.color, 'rgba(255,255,255,0.05)'],
+                    borderWidth: 0,
+                    hoverOffset: 0
+                }]
+            },
+            options: {
+                responsive: false,
+                cutout: '82%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                animation: { animateRotate: true, duration: 1400 }
+            }
+        });
+
+        /* ── Progress Bars ─────────────────────────────────── */
+        document.querySelectorAll('.score-bar-fill').forEach(bar => {
+            const val = parseFloat(bar.dataset.value) || 0;
+            bar.classList.add(getBarClass(val));
+            setTimeout(() => { bar.style.width = val + '%'; }, 200);
+        });
+    });
+
+    /* ── Tab Switching ────────────────────────────────────── */
+    document.querySelectorAll('.ai-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.ai-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.ai-pane').forEach(p => p.classList.add('d-none'));
+            this.classList.add('active');
+            document.getElementById('pane-' + this.dataset.pane).classList.remove('d-none');
+        });
+    });
+
+    /* ── CSRF helper ──────────────────────────────────────── */
+    function getCookie(name) {
+        let v = null;
+        if (document.cookie) {
+            document.cookie.split(';').forEach(c => {
+                c = c.trim();
+                if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
+            });
+        }
+        return v;
+    }
+
+    /* ── Tailor Resume ────────────────────────────────────── */
+    window.generateTailor = function (id) {
         document.getElementById('tailor-initial').classList.add('d-none');
         document.getElementById('tailor-loading').classList.remove('d-none');
-
-        const csrftoken = getCookie('csrftoken');
-
         fetch('{% url "analyzer:tailor_resume" %}', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrftoken
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken') },
             body: `analysis_id=${id}`
         })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('tailor-loading').classList.add('d-none');
-                const resultDiv = document.getElementById('tailor-result');
-                resultDiv.innerHTML = data.content;
-                resultDiv.classList.remove('d-none');
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('tailor-loading').classList.add('d-none');
-                document.getElementById('tailor-initial').classList.remove('d-none');
-                alert('Failed to generate content. Please try again.');
-            });
-    }
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('tailor-loading').classList.add('d-none');
+            const el = document.getElementById('tailor-result');
+            el.innerHTML = data.content;
+            el.classList.remove('d-none');
+        })
+        .catch(() => {
+            document.getElementById('tailor-loading').classList.add('d-none');
+            document.getElementById('tailor-initial').classList.remove('d-none');
+        });
+    };
 
-    function generateInterview(id) {
+    /* ── Interview Prep ───────────────────────────────────── */
+    window.generateInterview = function (id) {
         document.getElementById('interview-initial').classList.add('d-none');
         document.getElementById('interview-loading').classList.remove('d-none');
-
-        const csrftoken = getCookie('csrftoken');
-
         fetch('{% url "analyzer:interview_prep" %}', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrftoken
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken') },
             body: `analysis_id=${id}`
         })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('interview-loading').classList.add('d-none');
-                const resultDiv = document.getElementById('interview-result');
-                resultDiv.innerHTML = data.content;
-                resultDiv.classList.remove('d-none');
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('interview-loading').classList.add('d-none');
-                document.getElementById('interview-initial').classList.remove('d-none');
-                alert('Failed to generate interview questions. Please try again.');
-            });
-    }
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('interview-loading').classList.add('d-none');
+            const el = document.getElementById('interview-result');
+            el.innerHTML = data.content;
+            el.classList.remove('d-none');
+        })
+        .catch(() => {
+            document.getElementById('interview-loading').classList.add('d-none');
+            document.getElementById('interview-initial').classList.remove('d-none');
+        });
+    };
+})();
 </script>
 {% endblock %}
