@@ -6,6 +6,7 @@ class AnalysisResult(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     job_description_snippet = models.TextField(help_text="Snippet of JD for reference")
+    job_description_full = models.TextField(default="", blank=True, help_text="Full JD text for AI features")
     resume_filename = models.CharField(max_length=255)
     
     # Scores

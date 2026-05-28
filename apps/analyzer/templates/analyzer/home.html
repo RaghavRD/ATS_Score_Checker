@@ -28,6 +28,14 @@
 <!-- ── Dashboard Stats ───────────────────────────────────────── -->
 {% include 'analyzer/dashboard_snippet.html' %}
 
+<!-- ── Re-scan Banner ────────────────────────────────────────── -->
+{% if rescan %}
+<div class="animate-fade-in" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:var(--radius-md);padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:#4ade80;">
+    <i class="bi bi-arrow-repeat"></i>
+    <span>Job description pre-filled from your previous scan — just upload your updated resume and hit Analyze.</span>
+</div>
+{% endif %}
+
 <!-- ── Upload Form ───────────────────────────────────────────── -->
 <div class="row justify-content-center animate-slide-up">
     <div class="col-xl-10">
@@ -124,11 +132,11 @@
 <div class="row justify-content-center mt-5 animate-slide-up-2">
     <div class="col-xl-10">
         <p class="section-label text-center mb-4">How It Works</p>
-        <div class="row g-3 text-center">
-            {% for step in steps %}{% endfor %}
+        <div class="row g-3">
             <div class="col-md-4">
-                <div class="glass-card p-4">
-                    <div style="width:48px;height:48px;border-radius:50%;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.25rem;color:var(--primary-light);">
+                <div class="glass-card p-4 h-100 step-card">
+                    <span class="step-num">1</span>
+                    <div class="step-icon" style="background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.25);color:var(--primary-light);">
                         <i class="bi bi-clipboard-data"></i>
                     </div>
                     <h6 style="font-weight:700;">Paste Job Description</h6>
@@ -138,8 +146,9 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="glass-card p-4">
-                    <div style="width:48px;height:48px;border-radius:50%;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.25rem;color:var(--violet);">
+                <div class="glass-card p-4 h-100 step-card">
+                    <span class="step-num">2</span>
+                    <div class="step-icon" style="background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.25);color:var(--violet);">
                         <i class="bi bi-upload"></i>
                     </div>
                     <h6 style="font-weight:700;">Upload Your Resume</h6>
@@ -149,8 +158,9 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="glass-card p-4">
-                    <div style="width:48px;height:48px;border-radius:50%;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.25rem;color:var(--success);">
+                <div class="glass-card p-4 h-100 step-card">
+                    <span class="step-num">3</span>
+                    <div class="step-icon" style="background:rgba(34,197,94,0.12);border-color:rgba(34,197,94,0.25);color:var(--success);">
                         <i class="bi bi-graph-up-arrow"></i>
                     </div>
                     <h6 style="font-weight:700;">Get Your Score & Fix It</h6>
@@ -163,22 +173,19 @@
     </div>
 </div>
 
-{% if success %}
-<div class="row justify-content-center mt-4 animate-fade-in">
-    <div class="col-xl-10">
-        <div class="glass-card" style="border-color:rgba(34,197,94,0.3);">
-            <div class="glass-card-header" style="background:rgba(34,197,94,0.06);">
-                <h6 class="mb-0" style="color:var(--success);">
-                    <i class="bi bi-check-circle-fill me-2"></i>Extraction Successful — Text Preview
-                </h6>
-            </div>
-            <div class="p-4">
-                <pre style="max-height:320px;overflow-y:auto;">{{ extracted_text }}</pre>
-            </div>
-        </div>
+<!-- ── Full-screen Analyzing Progress Loader Overlay ────────────── -->
+<div id="analysisLoader" class="loader-overlay">
+    <div class="loader-visual">
+        <div class="loader-ring"></div>
+        <div class="loader-ring-inner"></div>
+        <i class="bi bi-cpu loader-icon"></i>
+    </div>
+    <div class="loader-step-text" id="loaderStepText">Reading resume file…</div>
+    <div class="loader-sub-text" id="loaderSubText">AI engine is processing your data</div>
+    <div class="loader-progress-track">
+        <div class="loader-progress-fill" id="loaderProgressFill"></div>
     </div>
 </div>
-{% endif %}
 
 {% endblock %}
 
@@ -227,21 +234,51 @@
     }
 
     // Loading state on submit
-    const loadingMessages = [
-        'Extracting resume text…',
-        'Matching keywords…',
-        'Running AI analysis…',
-        'Calculating your score…',
-    ];
-    let msgIdx = 0;
-    document.getElementById('uploadForm').addEventListener('submit', function () {
+    document.getElementById('uploadForm').addEventListener('submit', function (e) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Analyzing…';
-        loadingState.classList.remove('d-none');
-        setInterval(() => {
-            msgIdx = (msgIdx + 1) % loadingMessages.length;
-            document.getElementById('loadingText').textContent = loadingMessages[msgIdx];
-        }, 2500);
+        
+        const loader = document.getElementById('analysisLoader');
+        const loaderStep = document.getElementById('loaderStepText');
+        const loaderSub = document.getElementById('loaderSubText');
+        const progressFill = document.getElementById('loaderProgressFill');
+        
+        loader.classList.add('active');
+        
+        const stages = [
+            { pct: 15, title: 'Extracting Resume Text…', sub: 'pdfplumber parsing text characters' },
+            { pct: 35, title: 'Parsing Standard Sections…', sub: 'SectionExtractor grouping work history and skills' },
+            { pct: 55, title: 'Matching Resume Keywords…', sub: 'KeywordScorer calculating semantic occurrences' },
+            { pct: 75, title: 'Running Sentence Transformers…', sub: 'all-MiniLM-L6-v2 model calculating semantic distance' },
+            { pct: 90, title: 'Generating AI Fit Critique…', sub: 'Llama 3.3 writing evaluation summary' },
+            { pct: 98, title: 'Grading ATS Compatibility…', sub: 'generating final compatibility scores' }
+        ];
+        
+        let elapsed = 0;
+        const totalDuration = 10000; // Assume ~10s analysis
+        const intervalTime = 100;
+        
+        const loaderTimer = setInterval(() => {
+            elapsed += intervalTime;
+            const overallPct = Math.min(100, (elapsed / totalDuration) * 100);
+            
+            // Find current stage matching the percentage
+            let currentStage = stages[0];
+            for (let i = 0; i < stages.length; i++) {
+                if (overallPct >= stages[i].pct) {
+                    currentStage = stages[i];
+                }
+            }
+            
+            // Smoothly update loader UI
+            loaderStep.textContent = currentStage.title;
+            loaderSub.textContent = currentStage.sub;
+            progressFill.style.width = overallPct + '%';
+            
+            if (elapsed >= totalDuration) {
+                clearInterval(loaderTimer);
+            }
+        }, intervalTime);
     });
 </script>
 {% endblock %}

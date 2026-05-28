@@ -2,7 +2,26 @@
 
 {% block title %}Analysis Results — RankMyCV{% endblock %}
 
+{% block extra_head %}
+<!-- html2pdf bundle -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
 {% block content %}
+
+<!-- ── Anonymous Save Nudge ──────────────────────────────────── -->
+{% if is_anonymous %}
+<div class="animate-fade-in" style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.12));border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-lg);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;">
+    <div>
+        <p style="font-weight:700;color:var(--text-1);margin:0 0 0.2rem;">Save your results before they're gone</p>
+        <p style="font-size:0.85rem;color:var(--text-3);margin:0;">Create a free account to access history, re-scan, and AI features.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'signup' %}" class="btn btn-primary rounded-pill px-4">Create Free Account</a>
+        <a href="{% url 'login' %}" class="btn btn-outline-secondary rounded-pill px-4">Sign In</a>
+    </div>
+</div>
+{% endif %}
 
 <!-- ── Page Header ───────────────────────────────────────────── -->
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5 animate-fade-in">
@@ -16,10 +35,23 @@
             class="btn btn-primary rounded-pill px-4">
             <i class="bi bi-briefcase-fill me-2"></i>Find Matching Jobs
         </a>
-        {% endif %}
-        <a href="{% url 'analyzer:home' %}" class="btn btn-outline-secondary rounded-pill px-4">
-            <i class="bi bi-arrow-left me-2"></i>New Scan
+        {% if not is_anonymous %}
+        <a href="{% url 'analyzer:home' %}?rescan={{ analysis_obj.id }}"
+            class="btn btn-outline-primary rounded-pill px-4"
+            title="Go back to the upload page — your job description will be pre-filled">
+            <i class="bi bi-arrow-repeat me-2"></i>Re-scan
         </a>
+        {% endif %}
+        {% endif %}
+        {% if from_history %}
+        <a href="{% url 'analyzer:history' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Back to History
+        </a>
+        {% else %}
+        <a href="{% url 'analyzer:home' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-plus me-2"></i>New Scan
+        </a>
+        {% endif %}
     </div>
 </div>
 
@@ -68,34 +100,46 @@
         <div class="glass-card h-100 p-4">
             <p class="section-label mb-4">Score Breakdown</p>
 
-            <div class="score-bar-row" id="bar-keywords">
-                <span class="score-bar-label">
-                    <i class="bi bi-key me-2" style="color:var(--primary-light);"></i>Keywords
-                </span>
-                <div class="score-bar-track">
-                    <div class="score-bar-fill" data-value="{{ results.breakdown.keyword_score }}"></div>
-                </div>
-                <span class="score-bar-value">{{ results.breakdown.keyword_score|floatformat:0 }}%</span>
-            </div>
+            <div class="row g-3 align-items-center">
+                <div class="col-md-7">
+                    <div class="score-bar-row" id="bar-keywords">
+                        <span class="score-bar-label">
+                            <i class="bi bi-key me-2" style="color:var(--primary-light);"></i>Keywords
+                        </span>
+                        <div class="score-bar-track">
+                            <div class="score-bar-fill" data-value="{{ results.breakdown.keyword_score }}"></div>
+                        </div>
+                        <span class="score-bar-value">{{ results.breakdown.keyword_score|floatformat:0 }}%</span>
+                    </div>
 
-            <div class="score-bar-row" id="bar-semantic">
-                <span class="score-bar-label">
-                    <i class="bi bi-diagram-3 me-2" style="color:var(--violet);"></i>Semantic
-                </span>
-                <div class="score-bar-track">
-                    <div class="score-bar-fill" data-value="{{ results.breakdown.semantic_score }}"></div>
-                </div>
-                <span class="score-bar-value">{{ results.breakdown.semantic_score|floatformat:0 }}%</span>
-            </div>
+                    <div class="score-bar-row" id="bar-semantic">
+                        <span class="score-bar-label" style="position:relative;">
+                            <i class="bi bi-diagram-3 me-2" style="color:var(--violet);"></i>Semantic
+                            <span class="tooltip-trigger" tabindex="0" style="cursor:help;margin-left:4px;color:var(--text-3);font-size:0.75rem;" title="Semantic score measures how closely your resume's overall meaning and context aligns with the job description — beyond just keywords. A high score means your experience genuinely fits the role.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </span>
+                        <div class="score-bar-track">
+                            <div class="score-bar-fill" data-value="{{ results.breakdown.semantic_score }}"></div>
+                        </div>
+                        <span class="score-bar-value">{{ results.breakdown.semantic_score|floatformat:0 }}%</span>
+                    </div>
 
-            <div class="score-bar-row" id="bar-formatting">
-                <span class="score-bar-label">
-                    <i class="bi bi-layout-text-window me-2" style="color:var(--cyan);"></i>Formatting
-                </span>
-                <div class="score-bar-track">
-                    <div class="score-bar-fill" data-value="{{ results.breakdown.formatting_score }}"></div>
+                    <div class="score-bar-row" id="bar-formatting">
+                        <span class="score-bar-label">
+                            <i class="bi bi-layout-text-window me-2" style="color:var(--cyan);"></i>Formatting
+                        </span>
+                        <div class="score-bar-track">
+                            <div class="score-bar-fill" data-value="{{ results.breakdown.formatting_score }}"></div>
+                        </div>
+                        <span class="score-bar-value">{{ results.breakdown.formatting_score|floatformat:0 }}%</span>
+                    </div>
                 </div>
-                <span class="score-bar-value">{{ results.breakdown.formatting_score|floatformat:0 }}%</span>
+                <div class="col-md-5 d-flex align-items-center justify-content-center">
+                    <div style="width: 100%; max-width: 190px; height: 170px;">
+                        <canvas id="breakdownRadarChart"></canvas>
+                    </div>
+                </div>
             </div>
 
             <hr class="divider">
@@ -288,7 +332,27 @@
                 <div class="spinner-border mb-3" style="color:var(--warning);width:2.5rem;height:2.5rem;" role="status"></div>
                 <p style="color:var(--text-3);">Analyzing keywords and rewriting content…</p>
             </div>
-            <div id="tailor-result" class="d-none"></div>
+            
+            <div id="tailor-wrapper" class="d-none animate-fade-in">
+                <div class="compare-container">
+                    <div class="compare-pane">
+                        <div class="compare-title"><i class="bi bi-file-earmark-person-fill"></i>Original Resume Text</div>
+                        <div style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--text-2);">{{ analysis_obj.full_text|truncatechars:1800 }}</div>
+                    </div>
+                    <div class="compare-pane">
+                        <div class="compare-title"><i class="bi bi-stars" style="color:var(--warning);"></i>AI Optimized Resume Content</div>
+                        <div id="tailor-result-text" style="font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--text-2);"></div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
+                    <button class="btn btn-outline-success rounded-pill px-4" onclick="downloadOptimizedPDF()">
+                        <i class="bi bi-file-earmark-pdf-fill me-2"></i>Download as PDF
+                    </button>
+                    <a href="{% url 'jobs:board' %}?analysis_id={{ analysis_obj.id }}&optimized=true" class="btn btn-success rounded-pill px-4">
+                        <i class="bi bi-briefcase-fill me-2"></i>Find Jobs for Optimized Resume
+                    </a>
+                </div>
+            </div>
             {% else %}
             <div style="text-align:center;padding:3rem 1rem;">
                 <p style="color:var(--text-3);">
@@ -379,6 +443,10 @@
             gradeLabel.textContent  = g.label;
             gradeDesc.textContent   = g.desc;
             gradeBadge.style.animation = 'fadeIn 0.4s ease-out forwards';
+            
+            // Set dynamic background blob theme
+            document.body.className = ''; // Reset classes
+            document.body.classList.add('theme-' + g.letter.toLowerCase());
         }
     }
     requestAnimationFrame(animateScore);
@@ -405,12 +473,55 @@
             }
         });
 
+        /* ── Radar Chart for Score Breakdown ─────────────────── */
+        const radarCtx = document.getElementById('breakdownRadarChart').getContext('2d');
+        new Chart(radarCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Keywords', 'Semantic', 'Formatting'],
+                datasets: [{
+                    label: 'Match Profile',
+                    data: [
+                        {{ results.breakdown.keyword_score }},
+                        {{ results.breakdown.semantic_score }},
+                        {{ results.breakdown.formatting_score }}
+                    ],
+                    backgroundColor: 'rgba(99, 102, 241, 0.16)',
+                    borderColor: g.color,
+                    borderWidth: 2,
+                    pointBackgroundColor: g.color,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: g.color
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.08)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                        pointLabels: { color: '#94a3b8', font: { size: 9, family: 'Outfit', weight: 600 } },
+                        ticks: { display: false },
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+
         /* ── Progress Bars ─────────────────────────────────── */
         document.querySelectorAll('.score-bar-fill').forEach(bar => {
             const val = parseFloat(bar.dataset.value) || 0;
             bar.classList.add(getBarClass(val));
             setTimeout(() => { bar.style.width = val + '%'; }, 200);
         });
+        
+        // Add stagger reveal class to cards and tags
+        const tags = document.querySelectorAll('.kw-tag, .issue-list-item, .d-flex.gap-2.mb-2');
+        tags.forEach(t => t.classList.add('stagger-item'));
     });
 
     /* ── Tab Switching ────────────────────────────────────── */
@@ -447,9 +558,27 @@
         .then(r => r.json())
         .then(data => {
             document.getElementById('tailor-loading').classList.add('d-none');
-            const el = document.getElementById('tailor-result');
-            el.innerHTML = data.content;
-            el.classList.remove('d-none');
+            const wrapper = document.getElementById('tailor-wrapper');
+            const el = document.getElementById('tailor-result-text');
+            
+            // Highlight keywords in the tailored resume text
+            let content = data.content;
+            const matchedKws = JSON.parse('{{ results.details.keywords.matches|safe|escapejs }}') || [];
+            const missingKws = JSON.parse('{{ results.details.keywords.missing|safe|escapejs }}') || [];
+            const allKws = [...matchedKws, ...missingKws];
+            
+            allKws.forEach(kw => {
+                if (kw.length > 2) {
+                    const regex = new RegExp(`\\b(${kw})\\b`, 'gi');
+                    content = content.replace(regex, '<span class="highlight-added">$1</span>');
+                }
+            });
+            
+            el.innerHTML = content;
+            wrapper.classList.remove('d-none');
+            
+            // Trigger spotlight refresh on dynamically added cards
+            if (window.refreshSpotlights) window.refreshSpotlights();
         })
         .catch(() => {
             document.getElementById('tailor-loading').classList.add('d-none');
@@ -470,13 +599,151 @@
         .then(data => {
             document.getElementById('interview-loading').classList.add('d-none');
             const el = document.getElementById('interview-result');
-            el.innerHTML = data.content;
+            el.innerHTML = '';
+            
+            // Grid container
+            const grid = document.createElement('div');
+            grid.className = 'row g-3';
+            
+            // Build cards for Technical Questions
+            const techHeader = document.createElement('div');
+            techHeader.className = 'col-12 mt-2';
+            techHeader.innerHTML = '<h6 class="section-label mb-2"><i class="bi bi-cpu me-1"></i>Technical Questions</h6>';
+            grid.appendChild(techHeader);
+            
+            (data.technical || []).forEach((q, index) => {
+                const cardCol = document.createElement('div');
+                cardCol.className = 'col-md-6';
+                cardCol.innerHTML = `
+                    <div class="flip-card-container">
+                        <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                            <div class="flip-card-front">
+                                <div>
+                                    <span class="badge mb-2">Q${index+1} — Technical</span>
+                                    <p style="font-weight:700;font-size:0.875rem;line-height:1.5;margin-top:10px;">${q.question}</p>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-3);width:100%;">
+                                    <span><i class="bi bi-info-circle me-1"></i>Click to reveal hint</span>
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </div>
+                            </div>
+                            <div class="flip-card-back">
+                                <div>
+                                    <span class="badge mb-2" style="background:rgba(99,102,241,0.2);color:var(--primary-light);">Interviewer Guideline</span>
+                                    <p style="font-size:0.8rem;line-height:1.6;color:var(--text-2);margin-top:10px;">${q.hint}</p>
+                                </div>
+                                <div style="font-size:0.72rem;color:var(--primary-light);font-weight:600;width:100%;">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Click to flip back
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                grid.appendChild(cardCol);
+            });
+
+            // Build cards for Behavioral Questions
+            const behHeader = document.createElement('div');
+            behHeader.className = 'col-12 mt-4';
+            behHeader.innerHTML = '<h6 class="section-label mb-2"><i class="bi bi-chat-left-quote me-1"></i>Behavioral Questions</h6>';
+            grid.appendChild(behHeader);
+            
+            (data.behavioral || []).forEach((q, index) => {
+                const cardCol = document.createElement('div');
+                cardCol.className = 'col-md-6';
+                cardCol.innerHTML = `
+                    <div class="flip-card-container">
+                        <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                            <div class="flip-card-front">
+                                <div>
+                                    <span class="badge mb-2">Q${index+1} — Behavioral</span>
+                                    <p style="font-weight:700;font-size:0.875rem;line-height:1.5;margin-top:10px;">${q.question}</p>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-3);width:100%;">
+                                    <span><i class="bi bi-info-circle me-1"></i>Click to reveal hint</span>
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </div>
+                            </div>
+                            <div class="flip-card-back">
+                                <div>
+                                    <span class="badge mb-2" style="background:rgba(99,102,241,0.2);color:var(--primary-light);">STAR Approach Hint</span>
+                                    <p style="font-size:0.8rem;line-height:1.6;color:var(--text-2);margin-top:10px;">${q.hint}</p>
+                                </div>
+                                <div style="font-size:0.72rem;color:var(--primary-light);font-weight:600;width:100%;">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Click to flip back
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                grid.appendChild(cardCol);
+            });
+
+            // Gap Analysis
+            if (data.gap_analysis) {
+                const gapCol = document.createElement('div');
+                gapCol.className = 'col-12 mt-4';
+                gapCol.innerHTML = `
+                    <div class="glass-card p-4" style="border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.04);">
+                        <h6 style="color:var(--violet);font-weight:700;margin-bottom:0.5rem;"><i class="bi bi-lightning-charge-fill me-2"></i>AI Interview Gap Analysis</h6>
+                        <p style="font-size:0.875rem;color:var(--text-2);line-height:1.6;margin:0;">${data.gap_analysis}</p>
+                    </div>`;
+                grid.appendChild(gapCol);
+            }
+            
+            el.appendChild(grid);
             el.classList.remove('d-none');
+            
+            // Re-bind spotlights
+            if (window.refreshSpotlights) window.refreshSpotlights();
         })
         .catch(() => {
             document.getElementById('interview-loading').classList.add('d-none');
             document.getElementById('interview-initial').classList.remove('d-none');
         });
+    };
+
+    /* ── PDF Exporter ────────────────────────────────────── */
+    window.downloadOptimizedPDF = function () {
+        const textContainer = document.getElementById('tailor-result-text');
+        
+        const opt = {
+            margin:       [0.5, 0.5, 0.5, 0.5],
+            filename:     'RankMyCV_Optimized_Resume_Sections.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        
+        const printContainer = document.createElement('div');
+        printContainer.style.padding = '35px';
+        printContainer.style.color = '#1e293b';
+        printContainer.style.background = '#ffffff';
+        printContainer.style.fontFamily = "'Inter', sans-serif";
+        printContainer.style.fontSize = '12px';
+        printContainer.style.lineHeight = '1.6';
+        
+        let content = textContainer.innerHTML;
+        // Strip out dark classes and make them clean print-friendly
+        content = content.replace(/class="highlight-added"/g, 'style="color:#15803d; font-weight:600; background:rgba(34,197,94,0.1); padding:0.05rem 0.2rem; border-radius:2px;"');
+        
+        printContainer.innerHTML = `
+            <div style="border-bottom: 2px solid #6366f1; padding-bottom: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <h1 style="color: #6366f1; margin: 0 0 4px 0; font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">RankMyCV</h1>
+                    <p style="margin: 0; color: #64748b; font-size: 11px;">AI Optimized Resume Content Report</p>
+                </div>
+                <div style="text-align: right; color: #94a3b8; font-size: 9px;">
+                    Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                ${content}
+            </div>
+            <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; color: #94a3b8; font-size: 9px; font-family: 'Outfit', sans-serif;">
+                Optimized with RankMyCV. Get your score at RankMyCV.com
+            </div>
+        `;
+        
+        html2pdf().from(printContainer).set(opt).save();
     };
 })();
 </script>

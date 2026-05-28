@@ -88,10 +88,11 @@
                     {% elif score >= 45 %}C — Fair
                     {% else %}D — Needs Work{% endif %}
                 </span>
-                <button class="btn btn-outline-secondary btn-sm rounded-pill" disabled
-                    style="font-size:0.75rem;opacity:0.5;">
-                    Details Soon
-                </button>
+                <a href="{% url 'analyzer:detail' scan.pk %}"
+                    class="btn btn-outline-primary btn-sm rounded-pill"
+                    style="font-size:0.75rem;">
+                    <i class="bi bi-eye me-1"></i>View Details
+                </a>
             </div>
         </div>
     </div>

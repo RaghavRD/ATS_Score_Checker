@@ -1,9 +1,8 @@
 {% load static %}
-
 {% if stats %}
 <div class="row g-3 mb-5 animate-slide-up">
 
-    <!-- Total Scans -->
+    <!-- Stat: Total Scans -->
     <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="stat-label"><i class="bi bi-scan me-1"></i>Total Scans</div>
@@ -11,19 +10,47 @@
         </div>
     </div>
 
-    <!-- Avg Score -->
+    <!-- Stat: Avg Score -->
     <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="stat-label"><i class="bi bi-graph-up me-1"></i>Avg Score</div>
-            <div class="stat-value">{{ stats.average_score }}<span style="font-size:1.2rem;">%</span></div>
+            <div class="stat-value">{{ stats.average_score }}<span style="font-size:1.1rem;">%</span></div>
         </div>
     </div>
 
-    <!-- Progress Chart -->
-    <div class="col-12 col-md-6">
-        <div class="stat-card" style="padding: 1rem 1.25rem;">
-            <div class="stat-label mb-2"><i class="bi bi-activity me-1"></i>Score Over Time</div>
-            <div style="height: 72px;">
+    <!-- Stat: Best Score -->
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-label"><i class="bi bi-trophy me-1"></i>Best Score</div>
+            <div class="stat-value" style="background:linear-gradient(135deg,var(--success),#4ade80);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+                {{ stats.best_score }}<span style="font-size:1.1rem;">%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat: Avg Keyword -->
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-label"><i class="bi bi-key me-1"></i>Avg Keywords</div>
+            <div class="stat-value" style="background:linear-gradient(135deg,var(--violet),#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+                {{ stats.averages.keyword }}<span style="font-size:1.1rem;">%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Chart: all 4 dimensions -->
+    <div class="col-12">
+        <div class="stat-card" style="padding:1.25rem 1.5rem; height: 350px;">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="stat-label mb-0"><i class="bi bi-activity me-1"></i>Score Progress</div>
+                <div class="d-flex align-items-center gap-3" style="font-size:0.72rem;color:var(--text-3);">
+                    <span><span style="display:inline-block;width:10px;height:3px;background:#818cf8;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Overall</span>
+                    <span><span style="display:inline-block;width:10px;height:3px;background:#22c55e;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Keywords</span>
+                    <span><span style="display:inline-block;width:10px;height:3px;background:#a78bfa;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Semantic</span>
+                    <span><span style="display:inline-block;width:10px;height:3px;background:#06b6d4;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Formatting</span>
+                </div>
+            </div>
+            <div style="height:250px;">
                 <canvas id="progressChart"></canvas>
             </div>
         </div>
@@ -31,53 +58,72 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const ctx = document.getElementById('progressChart').getContext('2d');
-        const historyData = {{ stats.history|safe }};
+document.addEventListener("DOMContentLoaded", function () {
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    const historyData = {{ stats.history|safe }};
 
-        const labels     = historyData.map(item => item.date);
-        const dataPoints = historyData.map(item => item.score);
+    const labels     = historyData.map(d => d.date);
+    const overall    = historyData.map(d => d.score);
+    const keywords   = historyData.map(d => d.keyword);
+    const semantic   = historyData.map(d => d.semantic);
+    const formatting = historyData.map(d => d.formatting);
 
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: dataPoints,
-                    borderColor: '#818cf8',
-                    backgroundColor: 'rgba(99,102,241,0.08)',
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#818cf8',
-                    pointBorderColor: 'transparent',
-                    pointHoverRadius: 5,
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: {
+    const lineOpts = (color, fill) => ({
+        borderColor: color,
+        backgroundColor: fill,
+        tension: 0.4,
+        fill: false,
+        pointRadius: 3,
+        pointBackgroundColor: color,
+        pointBorderColor: 'transparent',
+        pointHoverRadius: 5,
+        borderWidth: 2,
+    });
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Overall',    data: overall,    ...lineOpts('#818cf8', 'rgba(129,140,248,0.06)'), fill: true },
+                { label: 'Keywords',   data: keywords,   ...lineOpts('#22c55e', 'transparent') },
+                { label: 'Semantic',   data: semantic,   ...lineOpts('#a78bfa', 'transparent') },
+                { label: 'Formatting', data: formatting, ...lineOpts('#06b6d4', 'transparent') },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
                     backgroundColor: '#18181d',
                     borderColor: 'rgba(255,255,255,0.08)',
                     borderWidth: 1,
                     titleColor: '#f1f5f9',
                     bodyColor: '#94a3b8',
-                    padding: 10
-                }},
-                scales: {
-                    x: { display: false },
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: { color: 'rgba(255,255,255,0.04)' },
-                        ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 4 },
-                        border: { display: false }
+                    padding: 10,
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
                     }
                 }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#64748b', font: { size: 10 } },
+                    border: { display: false }
+                },
+                y: {
+                    min: 0, max: 100,
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 5, callback: v => v + '%' },
+                    border: { display: false }
+                }
             }
-        });
+        }
     });
+});
 </script>
 {% endif %}

@@ -9,7 +9,12 @@
     <meta name="description" content="AI-powered ATS resume scoring. Find out why you're being ghosted and fix it.">
     <link rel="icon" type="image/png" href="{% static 'core/img/RankMyCV_favicon.png' %}">
 
-    <!-- Bootstrap Icons (icon font only — no Bootstrap CSS/JS) -->
+    <!-- Fonts (Outfit & Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons (icon font only ── no Bootstrap CSS/JS) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <!-- Chart.js -->
@@ -22,6 +27,9 @@
 </head>
 
 <body>
+
+    <!-- Central ambient glow behind the hero -->
+    <div class="ambient-glow" aria-hidden="true"></div>
 
     <!-- ── Navbar ──────────────────────────────────────────── -->
     <nav class="navbar">
@@ -147,6 +155,28 @@
             if (dropMenu)   dropMenu.classList.remove('show');
             if (navCollapse) navCollapse.classList.remove('open');
         });
+
+        /* Spotlight card mouse tracking */
+        const initSpotlight = () => {
+            const cards = document.querySelectorAll('.glass-card, .history-card, .stat-card');
+            cards.forEach(card => {
+                // Remove existing to avoid duplicates on dynamic renders
+                card.removeEventListener('mousemove', card._spotlightFn);
+                
+                card._spotlightFn = function (e) {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
+                };
+                card.addEventListener('mousemove', card._spotlightFn);
+            });
+        };
+        
+        document.addEventListener('DOMContentLoaded', initSpotlight);
+        // Expose helper to re-run spotlight check for dynamically created cards (like job board)
+        window.refreshSpotlights = initSpotlight;
     })();
     </script>
 

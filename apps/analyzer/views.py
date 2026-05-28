@@ -1,121 +1,141 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
+from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse, HttpResponseBadRequest
+
 from .forms import UploadResumeForm
+from .models import AnalysisResult
 from .services.parser import parse_resume
-
 from .services.scorer import ScoringEngine
+from apps.core.services.llm import LLMService
 
-class ResumeUploadView(LoginRequiredMixin, View):
+
+class ResumeUploadView(View):
+    """
+    Open to everyone — anonymous users can analyze; logged-in users get
+    their history stats and results are persisted to their account.
+    """
     template_name = 'analyzer/home.html'
 
     def get(self, request):
-        form = UploadResumeForm()
-        context = {'form': form}
-        
+        initial = {}
+        # Re-scan: pre-fill JD from a saved analysis
+        rescan_id = request.GET.get('rescan')
+        if rescan_id and request.user.is_authenticated:
+            try:
+                prev = AnalysisResult.objects.get(pk=rescan_id, user=request.user)
+                initial['job_description'] = prev.job_description_full or prev.job_description_snippet
+            except AnalysisResult.DoesNotExist:
+                pass
+
+        form = UploadResumeForm(initial=initial)
+        context = {'form': form, 'rescan': bool(initial)}
+
         if request.user.is_authenticated:
             from .services.analytics import AnalysisStatsService
             stats = AnalysisStatsService.get_user_stats(request.user)
             context['stats'] = stats
-            
+
         return render(request, self.template_name, context)
 
     def post(self, request):
         form = UploadResumeForm(request.POST, request.FILES)
-        if form.is_valid():
-            resume_file = request.FILES['resume']
-            jd_text = form.cleaned_data['job_description']
-            try:
-                resume_data = parse_resume(resume_file)
-                
-                # Run Analysis
-                engine = ScoringEngine()
-                analysis_result = engine.analyze(resume_data, jd_text)
-                
-                # Save to DB (Graceful failure)
-                saved_obj = None
-                try:
-                    from .models import AnalysisResult
-                    # Associate with user if logged in
-                    user_instance = request.user if request.user.is_authenticated else None
-                    
-                    saved_obj = AnalysisResult.objects.create(
-                        user=user_instance,
-                        job_description_snippet=jd_text[:500],
-                        resume_filename=resume_file.name,
-                        final_score=analysis_result['final_score'],
-                        keyword_score=analysis_result['breakdown']['keyword_score'],
-                        semantic_score=analysis_result['breakdown']['semantic_score'],
-                        formatting_score=analysis_result['breakdown']['formatting_score'],
-                        full_text=resume_data['full_text'],
-                        data=analysis_result
-                    )
-                except Exception as e:
-                    # Log error but don't fail the request
-                    print(f"Error saving history: {e}")
+        if not form.is_valid():
+            return render(request, self.template_name, {'form': form})
 
-                # DEBUG: Print the analysis result to console
-                # print("DEBUG - Analysis Result Keywords:")
-                # print(analysis_result)
-                # print(f"  matches: {analysis_result.get('details', {}).get('keywords', {}).get('matches', 'NOT FOUND')}")
-                # print(f"  missing: {analysis_result.get('details', {}).get('keywords', {}).get('missing', 'NOT FOUND')}")
-                
-                return render(request, 'analyzer/results.html', {
-                    'results': analysis_result,
-                    'extracted_text': resume_data['full_text'], # Pass full text for debugging/display
-                    'analysis_obj': saved_obj # Pass object so we have the ID for AJAX calls
-                })
-            except ValueError as e:
-                form.add_error('resume', str(e))
-        
-        return render(request, self.template_name, {'form': form})
+        resume_file = request.FILES['resume']
+        jd_text = form.cleaned_data['job_description']
 
-from django.http import JsonResponse, HttpResponseBadRequest
-from .models import AnalysisResult
-from apps.core.services.llm import LLMService
+        try:
+            resume_data = parse_resume(resume_file)
+        except ValueError as e:
+            form.add_error('resume', str(e))
+            return render(request, self.template_name, {'form': form})
+
+        engine = ScoringEngine()
+        analysis_result = engine.analyze(resume_data, jd_text)
+
+        saved_obj = None
+        try:
+            user_instance = request.user if request.user.is_authenticated else None
+            saved_obj = AnalysisResult.objects.create(
+                user=user_instance,
+                job_description_snippet=jd_text[:500],
+                job_description_full=jd_text,          # full JD saved
+                resume_filename=resume_file.name,
+                final_score=analysis_result['final_score'],
+                keyword_score=analysis_result['breakdown']['keyword_score'],
+                semantic_score=analysis_result['breakdown']['semantic_score'],
+                formatting_score=analysis_result['breakdown']['formatting_score'],
+                full_text=resume_data['full_text'],
+                data=analysis_result,
+            )
+        except Exception as e:
+            print(f"Error saving analysis: {e}")
+
+        return render(request, 'analyzer/results.html', {
+            'results': analysis_result,
+            'analysis_obj': saved_obj,
+            'is_anonymous': not request.user.is_authenticated,
+        })
+
+
+class AnalysisDetailView(LoginRequiredMixin, DetailView):
+    """
+    Re-renders a saved analysis result from the DB — powers "View Details"
+    in the history page.
+    """
+    model = AnalysisResult
+    template_name = 'analyzer/results.html'
+
+    def get_queryset(self):
+        return AnalysisResult.objects.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        obj = self.object
+        ctx['results'] = obj.data
+        ctx['analysis_obj'] = obj
+        ctx['is_anonymous'] = False
+        ctx['from_history'] = True
+        return ctx
+
 
 class TailorResumeView(LoginRequiredMixin, View):
     def post(self, request):
         analysis_id = request.POST.get('analysis_id')
         if not analysis_id:
             return HttpResponseBadRequest("Missing analysis_id")
-            
+
         try:
             analysis = AnalysisResult.objects.get(id=analysis_id, user=request.user)
-            llm = LLMService()
-            # Need original JD. Usually stored in snippet, but snippet is short?
-            # Ideally we should have stored full JD.
-            # Fallback: Use snippet or just generic.
-            # Actually, `analyze` takes full JD. But we didn't store full JD in DB except as snippet.
-            # Mistake in Phase 2? 
-            # Snippet is 500 chars. Might be too short for good tailoring.
-            # For now, let's use what we have in `data` JSON if we stored it?
-            # `data` field stores the `analysis_result` dict. It doesn't have JD.
-            # Workaround: For this session, we rely on the snippet. 
-            # In a real app, we'd store full JD. 
-            # Let's check snippet length.
-            
-            tailored_content = llm.generate_tailored_resume(analysis.full_text, analysis.job_description_snippet)
-            return JsonResponse({'content': tailored_content})
         except AnalysisResult.DoesNotExist:
             return HttpResponseBadRequest("Invalid analysis ID")
+
+        # Use full JD now that we store it
+        jd = analysis.job_description_full or analysis.job_description_snippet
+        llm = LLMService()
+        content = llm.generate_tailored_resume(analysis.full_text, jd)
+        return JsonResponse({'content': content})
+
 
 class InterviewPrepView(LoginRequiredMixin, View):
     def post(self, request):
         analysis_id = request.POST.get('analysis_id')
         if not analysis_id:
             return HttpResponseBadRequest("Missing analysis_id")
-            
+
         try:
             analysis = AnalysisResult.objects.get(id=analysis_id, user=request.user)
-            llm = LLMService()
-            questions = llm.generate_interview_questions(analysis.full_text, analysis.job_description_snippet)
-            return JsonResponse({'content': questions})
         except AnalysisResult.DoesNotExist:
             return HttpResponseBadRequest("Invalid analysis ID")
 
-from django.views.generic import ListView
-from .models import AnalysisResult
+        jd = analysis.job_description_full or analysis.job_description_snippet
+        llm = LLMService()
+        data = llm.generate_interview_questions(analysis.full_text, jd)
+        return JsonResponse(data)
+
 
 class AnalysisHistoryView(LoginRequiredMixin, ListView):
     model = AnalysisResult

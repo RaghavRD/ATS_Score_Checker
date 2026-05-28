@@ -92,12 +92,22 @@ class LLMService:
             logger.error(f"Tailor API Error: {e}")
             return "<p class='text-danger'>Error generating tailored content.</p>"
 
-    def generate_interview_questions(self, full_text: str, jd_text: str) -> str:
+    def generate_interview_questions(self, full_text: str, jd_text: str) -> Dict[str, Any]:
         """
         Generates interview questions based on resume gaps vs JD.
+        Returns a dict containing technical, behavioral, and gap analysis.
         """
         if not self.client:
-            return "<p><em>Mock Interview: AI generation not available without API Key.</em></p>"
+            return {
+                "technical": [
+                    {"question": "Can you explain how you would optimize database queries in a Django application?", "hint": "Talk about select_related, prefetch_related, database indexing, and query caching."},
+                    {"question": "How do you handle state management or dynamic UI updates in standard JavaScript?", "hint": "Discuss event listeners, DOM manipulation, custom state stores, and modular component structures."}
+                ],
+                "behavioral": [
+                    {"question": "Describe a time when you had to adapt quickly to a new technology stack.", "hint": "Use the STAR method. Focus on learning agility, debugging techniques, and self-guided reading."}
+                ],
+                "gap_analysis": "The candidate has solid experience in backend services, but could emphasize cloud-native deployments and containerization (Docker, Kubernetes)."
+            }
 
         prompt = f"""
         You are a Technical Interviewer.
@@ -110,25 +120,44 @@ class LLMService:
         RESUME:
         {full_text[:2000]}
         
-        Output a clean HTML snippet (no markdown) containing:
-        1. <h3>Technical Questions</h3> (5 questions)
-        2. <h3>Behavioral Questions</h3> (3 questions)
-        3. <h3>Gap Analysis</h3> (1 question about a missing skill if any)
+        Return a strict JSON output (NO markdown, no ```json wrappers) with the following structure:
+        {{
+            "technical": [
+                {{
+                    "question": "The technical question",
+                    "hint": "What the interviewer is looking for / suggested answer key"
+                }}
+            ],
+            "behavioral": [
+                {{
+                    "question": "The behavioral question",
+                    "hint": "STAR method hint or suggested focus"
+                }}
+            ],
+            "gap_analysis": "Brief analysis of the candidate's biggest technical gaps against the JD and how to speak to it."
+        }}
+        
+        Generate exactly 4 technical questions and 3 behavioral questions.
         """
         
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a lead interviewer. Output HTML only."},
+                    {"role": "system", "content": "You are a lead interviewer. Return valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
+                response_format={"type": "json_object"},
                 temperature=0.7
             )
-            return response.choices[0].message.content
+            return json.loads(response.choices[0].message.content)
         except Exception as e:
             logger.error(f"Interview API Error: {e}")
-            return "<p class='text-danger'>Error generating interview questions.</p>"
+            return {
+                "technical": [],
+                "behavioral": [],
+                "gap_analysis": "Failed to parse interview questions. Please try again."
+            }
 
     def _build_prompt(self, resume: str, jd: str) -> str:
         # Truncate to reasonable limits to avoid token overflow issues on small limits
